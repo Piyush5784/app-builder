@@ -1,4 +1,4 @@
-import type { ToolCall, ToolName } from "./types";
+import type { ToolCall, ToolName } from "@/agent/types";
 
 // Only these mutate sandbox state — readFile/listFiles are pure reads and
 // never need replaying.

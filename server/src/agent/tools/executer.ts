@@ -1,6 +1,7 @@
 import type { Sandbox } from "e2b";
-import { config } from "../config";
-import type { ToolCall } from "../types";
+import { config } from "@/agent/config";
+import { logger } from "@/agent/telemetry";
+import type { ToolCall } from "@/agent/types";
 
 function resolvePath(pathInput: string | undefined): string {
   const cleaned = (pathInput ?? "").replace(/^\/+/, "");
@@ -9,7 +10,7 @@ function resolvePath(pathInput: string | undefined): string {
 }
 
 export async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<string> {
-  console.log(`[tool] calling ${call.name} with args: ${JSON.stringify(call.arguments)}`);
+  logger.info("tool", "calling", { tool: call.name, args: call.arguments });
 
   try {
     switch (call.name) {
@@ -72,7 +73,7 @@ export async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<str
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[tool] ${call.name} failed: ${message}`);
+    logger.error("tool", "failed", { tool: call.name, error: message });
     return `Error running ${call.name}: ${message}`;
   }
 }
@@ -83,7 +84,7 @@ export async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<str
  * sandbox died (idle timeout, crash) and a new one was just created.
  */
 export async function replayEvents(sandbox: Sandbox, calls: ToolCall[]): Promise<void> {
-  console.log(`[tool] replaying ${calls.length} recorded event(s) on fresh sandbox`);
+  logger.info("tool", "replaying recorded events on fresh sandbox", { count: calls.length });
 
   for (const call of calls) {
     const output = await executeTool(sandbox, call);
@@ -95,5 +96,5 @@ export async function replayEvents(sandbox: Sandbox, calls: ToolCall[]): Promise
     }
   }
 
-  console.log(`[tool] replay finished`);
+  logger.info("tool", "replay finished", { count: calls.length });
 }

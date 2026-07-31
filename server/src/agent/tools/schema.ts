@@ -1,4 +1,4 @@
-import type { ToolSchema } from "../types";
+import type { ToolSchema } from "@/agent/types";
 
 
 

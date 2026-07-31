@@ -1,7 +1,7 @@
-import type { LLMProvider } from "../types";
-import { createOpenAICompatProvider } from "./openaiCompat";
-import { geminiProvider } from "./gemini";
-import { config } from "../config";
+import type { LLMProvider } from "@/agent/types";
+import { createOpenAICompatProvider } from "@/agent/providers/openai-compat";
+import { geminiProvider } from "@/agent/providers/gemini";
+import { config } from "@/agent/config";
 
 export type ProviderName = "openrouter" | "gemini" | "ollama";
 

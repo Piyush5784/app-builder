@@ -1,5 +1,6 @@
 import { Sandbox } from "e2b";
-import { config } from "../config";
+import { config } from "@/agent/config";
+import { logger } from "@/agent/telemetry";
 
 interface SandboxSession {
   sandbox: Sandbox;
@@ -24,17 +25,17 @@ export async function getOrCreateSandbox(sessionId: string): Promise<SandboxHand
     try {
       await existingSession.sandbox.setTimeout(config.sandboxTimeoutMs); // extend the 30 min window
       existingSession.lastActiveAt = Date.now();
-      console.log(`[sandbox] reused sandbox ${existingSession.sandbox.sandboxId} for session ${sessionId}`);
+      logger.info("sandbox", "reused sandbox", { sessionId, sandboxId: existingSession.sandbox.sandboxId });
       return { sandbox: existingSession.sandbox, isNew: false };
     } catch {
       // Expected when the old sandbox already died (idle timeout, restart) —
       // not an error worth a stack trace, just move on and create a fresh one.
-      console.log(`[sandbox] session ${sessionId}'s previous sandbox is gone, creating a new one`);
+      logger.info("sandbox", "previous sandbox is gone, creating a new one", { sessionId });
       delete sandboxSessions[sessionId];
     }
   }
 
-  console.log(`[sandbox] creating new sandbox for session ${sessionId} from template ${config.e2b.templateId}`);
+  logger.info("sandbox", "creating new sandbox", { sessionId, templateId: config.e2b.templateId });
 
   const newSandbox = await Sandbox.create(config.e2b.templateId, {
     timeoutMs: config.sandboxTimeoutMs,
@@ -45,7 +46,7 @@ export async function getOrCreateSandbox(sessionId: string): Promise<SandboxHand
     lastActiveAt: Date.now(),
   };
 
-  console.log(`[sandbox] created ${newSandbox.sandboxId} for session ${sessionId}`);
+  logger.info("sandbox", "created", { sessionId, sandboxId: newSandbox.sandboxId });
 
   return { sandbox: newSandbox, isNew: true };
 }
@@ -63,13 +64,15 @@ export async function destroySandbox(sessionId: string): Promise<void> {
   const session = sandboxSessions[sessionId];
   if (!session) return;
 
-
   try {
     await session.sandbox.kill();
-    console.log(`[sandbox] killed ${session.sandbox.sandboxId} for session ${sessionId} after error`);
-
+    logger.info("sandbox", "killed after error", { sessionId, sandboxId: session.sandbox.sandboxId });
     delete sandboxSessions[sessionId];
   } catch (error) {
-    console.error(`[sandbox] failed to kill ${session.sandbox.sandboxId} for session ${sessionId}:`, error);
+    logger.error("sandbox", "failed to kill", {
+      sessionId,
+      sandboxId: session.sandbox.sandboxId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }

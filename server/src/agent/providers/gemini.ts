@@ -1,6 +1,6 @@
-import type { ChatMessage, LLMProvider, ProviderResponse, ToolSchema } from "../types";
-import { toToolCall } from "../types";
-import { config } from "../config";
+import type { ChatMessage, LLMProvider, ProviderResponse, ToolSchema } from "@/agent/types";
+import { toToolCall } from "@/agent/types";
+import { config } from "@/agent/config";
 
 interface GeminiPart {
   text?: string;

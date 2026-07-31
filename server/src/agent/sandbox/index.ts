@@ -1,2 +1,2 @@
-export { getOrCreateSandbox, getPreviewUrl, touchSession, destroySandbox } from "./manager";
-export type { SandboxHandle } from "./manager";
+export { getOrCreateSandbox, getPreviewUrl, touchSession, destroySandbox } from "@/agent/sandbox/manager";
+export type { SandboxHandle } from "@/agent/sandbox/manager";

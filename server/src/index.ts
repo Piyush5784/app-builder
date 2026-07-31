@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
-import { runAgent, getSandboxUrl, type ProviderName } from "./agent";
+import { runAgent, getSandboxUrl, type ProviderName } from "@/agent";
+import { logger } from "@/agent/telemetry";
 
 const app = express();
 app.use(cors());
@@ -15,17 +16,20 @@ app.get("/api/health", (_req, res) => {
 app.get("/api/sandbox/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
 
-  if(!sessionId || typeof sessionId !== "string") {
+  if (!sessionId || typeof sessionId !== "string") {
     res.status(400).json({ error: "Invalid sessionId" });
     return;
   }
 
   try {
-    console.log(`[http] GET /api/sandbox/${sessionId}`);
+    logger.info("http", "GET /api/sandbox", { sessionId });
     const result = await getSandboxUrl(sessionId);
     res.json(result);
   } catch (error) {
-    console.error(`[http] error opening sandbox for session ${sessionId}:`, error);
+    logger.error("http", "error opening sandbox", {
+      sessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -39,25 +43,29 @@ app.post("/api/prompt", (req, res) => {
   }
 
   const sId = sessionId && typeof sessionId === "string" ? sessionId : crypto.randomUUID();
-  const providerName: ProviderName | undefined = "ollama"
+  const providerName: ProviderName | undefined =
+    provider === "gemini" || provider === "openrouter" || provider === "ollama" ? provider : undefined;
 
-  console.log(`[http] POST /api/prompt — session=${sId}`);
+  logger.info("http", "POST /api/prompt", { sessionId: sId });
 
   let responded = false;
 
   runAgent(sId, prompt, providerName, (previewUrl) => {
     responded = true;
-    console.log(`[http] POST /api/prompt — session=${sId} sandbox ready, responding early`);
+    logger.info("http", "sandbox ready, responding early", { sessionId: sId });
     res.json({ sessionId: sId, previewUrl });
   })
     .then((result) => {
-      console.log(`[http] POST /api/prompt — session=${sId} agent finished: "${result.reply}"`);
+      logger.info("http", "agent finished", { sessionId: sId, reply: result.reply });
       if (!responded) {
         res.json(result);
       }
     })
     .catch((error) => {
-      console.error("[http] error processing prompt:", error);
+      logger.error("http", "error processing prompt", {
+        sessionId: sId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       if (!responded) {
         res.status(500).json({ error: "Internal Server Error" });
       }
@@ -65,5 +73,5 @@ app.post("/api/prompt", (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log("Server is running on port 3000");
+  logger.info("http", "server running", { port: 3000 });
 });

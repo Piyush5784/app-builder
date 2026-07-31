@@ -1,5 +1,6 @@
-import type { ChatMessage, LLMProvider, ProviderResponse, ToolSchema } from "../types";
-import { toToolCall } from "../types";
+import type { ChatMessage, LLMProvider, ProviderResponse, ToolSchema } from "@/agent/types";
+import { toToolCall } from "@/agent/types";
+import { logger } from "@/agent/telemetry";
 
 interface OpenAIToolCallWire {
   id: string;
@@ -114,9 +115,10 @@ async function requestOnce(options: OpenAICompatOptions, body: string): Promise<
   if (toolCalls.length === 0 && message.content) {
     const recovered = extractFallbackToolCalls(message.content);
     if (recovered.length > 0) {
-      console.warn(
-        `[provider:${options.providerLabel}] model put tool call(s) in content instead of tool_calls — recovered ${recovered.length}`
-      );
+      logger.warn("provider", "model put tool call(s) in content instead of tool_calls, recovered", {
+        provider: options.providerLabel,
+        recoveredCount: recovered.length,
+      });
       return { content: null, toolCalls: recovered };
     }
 
@@ -156,7 +158,12 @@ export function createOpenAICompatProvider(options: OpenAICompatOptions): LLMPro
           return await requestOnce(options, body);
         } catch (error) {
           lastError = error;
-          console.error(`[provider:${options.providerLabel}] attempt ${attempt}/${maxAttempts} failed:`, error);
+          logger.error("provider", "attempt failed", {
+            provider: options.providerLabel,
+            attempt,
+            maxAttempts,
+            error: error instanceof Error ? error.message : String(error),
+          });
           if (attempt < maxAttempts) {
             await new Promise((resolve) => setTimeout(resolve, attempt * 700));
           }
