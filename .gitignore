@@ -1,0 +1,57 @@
+# dependencies (bun install)
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+_.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+temp.html
+e2b.toml
+
+
+graphify-out
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+.turbo
+
+# IntelliJ based IDEs
+.idea
+
+# Finder (MacOS) folder config
+.DS_Store
+
+
+# typescript
+*.tsbuildinfo
+
+# old/client (tanstack router generated files/cache)
+old/client/src/routeTree.gen.ts
+old/client/.tanstack
+
+# generated prisma/zenstack client output anywhere in the tree
+**/src/generated/prisma
+generated
+
+# playwright
+apps/web/playwright-report
+apps/web/test-results
+apps/web/blob-report
+apps/web/playwright/.auth
