@@ -4,8 +4,13 @@ import type { ChatMessage } from "@/agent/types";
 // conversation survives across requests, not just the sandbox.
 const histories = new Map<string, ChatMessage[]>();
 
-export function getOrInitHistory(sessionId: string, systemPrompt: string): ChatMessage[] {
-  return histories.get(sessionId) ?? [{ role: "system", content: systemPrompt }];
+export function getOrInitHistory(
+  sessionId: string,
+  systemPrompt: string,
+): ChatMessage[] {
+  return (
+    histories.get(sessionId) ?? [{ role: "system", content: systemPrompt }]
+  );
 }
 
 export function saveHistory(sessionId: string, messages: ChatMessage[]): void {

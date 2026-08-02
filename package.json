@@ -16,7 +16,7 @@
     "test:e2e": "bun run --cwd apps/web test:e2e",
     "test:e2e:ui": "bun run --cwd apps/web test:e2e:ui",
     "test:e2e:browser": "bun run --cwd apps/web test:e2e --headed",
-    "check": "bun install && turbo format && turbo run lint typecheck build",
+    "check": "bun install && bun run generate && turbo format && turbo run lint typecheck build",
     "db:seed": "bun run --cwd packages/db db:seed"
   },
   "devDependencies": {

@@ -1,6 +1,9 @@
 import { prisma } from "@package/db";
 
-export async function upsertAgentSession(sessionId: string, sandboxId: string): Promise<void> {
+export async function upsertAgentSession(
+  sessionId: string,
+  sandboxId: string,
+): Promise<void> {
   await prisma.agentSession.upsert({
     where: { id: sessionId },
     create: { id: sessionId, sandboxId },

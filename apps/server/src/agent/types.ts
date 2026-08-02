@@ -1,4 +1,3 @@
-
 import type { ToolName } from "@package/shared";
 export type { ToolName };
 
@@ -78,10 +77,21 @@ export interface LLMProvider {
  * Single typed boundary between "raw JSON args from the model" and the rest of the app.
  * Every provider must go through this so nothing downstream touches `any`.
  */
-export function toToolCall(id: string, name: string, rawArgs: Record<string, unknown>): ToolCall {
+export function toToolCall(
+  id: string,
+  name: string,
+  rawArgs: Record<string, unknown>,
+): ToolCall {
   switch (name as ToolName) {
     case "writeFile":
-      return { id, name: "writeFile", arguments: { path: String(rawArgs.path), content: String(rawArgs.content) } };
+      return {
+        id,
+        name: "writeFile",
+        arguments: {
+          path: String(rawArgs.path),
+          content: String(rawArgs.content),
+        },
+      };
     case "editFile":
       return {
         id,
@@ -93,13 +103,29 @@ export function toToolCall(id: string, name: string, rawArgs: Record<string, unk
         },
       };
     case "readFile":
-      return { id, name: "readFile", arguments: { path: String(rawArgs.path) } };
+      return {
+        id,
+        name: "readFile",
+        arguments: { path: String(rawArgs.path) },
+      };
     case "deleteFile":
-      return { id, name: "deleteFile", arguments: { path: String(rawArgs.path) } };
+      return {
+        id,
+        name: "deleteFile",
+        arguments: { path: String(rawArgs.path) },
+      };
     case "listFiles":
-      return { id, name: "listFiles", arguments: { path: rawArgs.path ? String(rawArgs.path) : undefined } };
+      return {
+        id,
+        name: "listFiles",
+        arguments: { path: rawArgs.path ? String(rawArgs.path) : undefined },
+      };
     case "runCommand":
-      return { id, name: "runCommand", arguments: { command: String(rawArgs.command) } };
+      return {
+        id,
+        name: "runCommand",
+        arguments: { command: String(rawArgs.command) },
+      };
     default:
       throw new Error(`Unknown tool call from model: ${name}`);
   }

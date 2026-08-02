@@ -9,7 +9,9 @@
     "./schema-lite": "./zenstack/generated/schema-lite.ts"
   },
   "scripts": {
-    "generate": "zen generate --lite -o ./zenstack/generated && prisma generate --schema ./zenstack/generated/prisma/schema.prisma"
+    "generate": "zen generate --lite -o ./zenstack/generated && prisma generate --schema ./zenstack/generated/prisma/schema.prisma",
+    "format": "prettier --write \"**/*.ts\"",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",

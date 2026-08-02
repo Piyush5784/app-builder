@@ -40,28 +40,28 @@ import { ParticleMorph } from "@/components/custom/particle-morph/particle-morph
   autoMorph
   mouseRepel
   rotation
-/>
+/>;
 ```
 
 See `example-hero.tsx` in this folder for a full hero-section example.
 
 ### Props
 
-| Prop | Type | Default | Notes |
-|---|---|---|---|
-| `width` / `height` | `number` | `700` | container size in px |
-| `particleCount` | `number` | `900` | thousands are fine — see Performance approach below |
-| `particleSize` | `number` | `2` | base diameter; actual size varies ±per particle |
-| `shape` | `ShapeName` | `'sphere'` | ignored once `autoMorph` starts cycling |
-| `autoMorph` | `boolean` | `false` | cycles through `SHAPE_SEQUENCE` forever |
-| `morphDuration` | `number` | `4000` | ms per full morph+hold cycle |
-| `background` | `string` | `'#000000'` | any CSS background value, shows through the transparent canvas |
-| `particleColor` | `string` | `'pink'` | any CSS color, or `'random'` for a random hue; particles get tonal variants of this one hue, never unrelated colors |
-| `glow` | `boolean` | `true` | soft radial-gradient sprite + additive (`lighter`) blending |
-| `mouseRepel` / `mouseAttract` | `boolean` | `false` | mutually usable; repel takes precedence if both true |
-| `rotation` / `rotationSpeed` | `boolean` / `number` | `true` / `0.15` | slow orbit of the whole cloud |
-| `pulse` | `boolean` | `true` | global breathing scale |
-| `hoverEffect` | `boolean` | `true` | particles near the cursor brighten/grow |
+| Prop                          | Type                 | Default         | Notes                                                                                                               |
+| ----------------------------- | -------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `width` / `height`            | `number`             | `700`           | container size in px                                                                                                |
+| `particleCount`               | `number`             | `900`           | thousands are fine — see Performance approach below                                                                 |
+| `particleSize`                | `number`             | `2`             | base diameter; actual size varies ±per particle                                                                     |
+| `shape`                       | `ShapeName`          | `'sphere'`      | ignored once `autoMorph` starts cycling                                                                             |
+| `autoMorph`                   | `boolean`            | `false`         | cycles through `SHAPE_SEQUENCE` forever                                                                             |
+| `morphDuration`               | `number`             | `4000`          | ms per full morph+hold cycle                                                                                        |
+| `background`                  | `string`             | `'#000000'`     | any CSS background value, shows through the transparent canvas                                                      |
+| `particleColor`               | `string`             | `'pink'`        | any CSS color, or `'random'` for a random hue; particles get tonal variants of this one hue, never unrelated colors |
+| `glow`                        | `boolean`            | `true`          | soft radial-gradient sprite + additive (`lighter`) blending                                                         |
+| `mouseRepel` / `mouseAttract` | `boolean`            | `false`         | mutually usable; repel takes precedence if both true                                                                |
+| `rotation` / `rotationSpeed`  | `boolean` / `number` | `true` / `0.15` | slow orbit of the whole cloud                                                                                       |
+| `pulse`                       | `boolean`            | `true`          | global breathing scale                                                                                              |
+| `hoverEffect`                 | `boolean`            | `true`          | particles near the cursor brighten/grow                                                                             |
 
 `ShapeName`: `'sphere' | 'circle' | 'cube' | 'torus' | 'spiral' | 'wave' | 'blob' | 'heart' | 'galaxy' | 'random'`
 
@@ -95,7 +95,7 @@ See `example-hero.tsx` in this folder for a full hero-section example.
 `particleColor` takes a single base color (or `'random'`), not a palette
 array. `utils/color-variants.ts` resolves that base color to a hue and
 generates a small set of tonal variants — a pale, nearly-white tint through
-to a deep, fully-saturated accent of the *same* hue — and each particle is
+to a deep, fully-saturated accent of the _same_ hue — and each particle is
 seeded with one of those variants. This keeps the field reading as one
 coherent color, never a scatter of unrelated hues.
 
@@ -105,7 +105,7 @@ On every shape change, `setTargetShape` snapshots the current live position of
 every particle as the new `start`, computes the new shape's points as
 `target`, and resets a timer. Each frame, an eased `t` (cubic in/out) blends
 `start → target`. Organic drift (gradient noise), a slow personal orbit, and
-global rotation/breathing are all added *on top* of that interpolated base
+global rotation/breathing are all added _on top_ of that interpolated base
 position before projecting to 2D — so particles are still alive and wandering
 even while "settled" into a shape, and there's never a hard teleport between
 shapes.

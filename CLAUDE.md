@@ -19,7 +19,7 @@ old/         Archived pre-migration app. Reference only — see rules below.
 - **Single source of truth**: `zenstack/schema.zmodel`. Never hand-edit anything under `zenstack/generated/` — it's regenerated output (the generated `schema.prisma` even has a "DO NOT MODIFY" header).
 - After changing `schema.zmodel`, run `bun run generate` in this package. That does two things in one step: `zen generate` (produces `schema.ts`/`schema-lite.ts`/`models.ts`/`input.ts` for the ORM/hooks) **and** `prisma generate` against the ZenStack-generated `schema.prisma` (produces the real `@prisma/client`).
 - **Two separate database clients exist on purpose, both exported from here**:
-  - `schema` / `schema-lite` (exports) — feeds `ZenStackClient` (`@zenstackhq/orm`), used by `apps/server` for the generic CRUD/hooks endpoint. `ZenStackClient` and `PrismaClient` are *not* interchangeable — `ZenStackClient` implements `ClientContract` (`$schema`, `$options`, policy enforcement, procedures); a plain `PrismaClient` doesn't have this shape and will not work with `@zenstackhq/server`'s handlers.
+  - `schema` / `schema-lite` (exports) — feeds `ZenStackClient` (`@zenstackhq/orm`), used by `apps/server` for the generic CRUD/hooks endpoint. `ZenStackClient` and `PrismaClient` are _not_ interchangeable — `ZenStackClient` implements `ClientContract` (`$schema`, `$options`, policy enforcement, procedures); a plain `PrismaClient` doesn't have this shape and will not work with `@zenstackhq/server`'s handlers.
   - `prisma` (export, `src/prisma.ts`) — a real generated Prisma client, used **only** by better-auth's `prismaAdapter` in `apps/server`. Nothing else should need it; app CRUD goes through `ZenStackClient`.
 - `prisma/migrations/` and `prisma/seed.ts` are real and tracked — `bunx prisma migrate dev` / `bunx prisma db seed` run from this package (`prisma.config.ts` points at the generated schema path).
 - `prisma/seed.ts` has its **own** minimal `betterAuth` instance (just `prismaAdapter` + `emailAndPassword`) purely to call `signUpEmail` correctly (proper password hashing + `Account` rows). It intentionally does not import `apps/server`'s full auth config (Google OAuth, email templates) — packages don't reach into apps.
@@ -55,15 +55,15 @@ old/         Archived pre-migration app. Reference only — see rules below.
 ## Cross-cutting conventions
 
 - **Bun-first**: `bun install` / `bun run <script>` / `bun test`, not npm/yarn/pnpm equivalents.
-- **Shared tooling devDependencies are hoisted to the root `package.json`**: `typescript`, `eslint` + its plugins, `@types/node`/`react`/`react-dom`, `@tailwindcss/vite`, `globals`. If two packages need the same *tooling* dependency, add it at the root, not per-package. Actual runtime libraries (`react`, `zod`, `pg`, etc.) stay declared in whichever package imports them, even when versions happen to match across packages.
+- **Shared tooling devDependencies are hoisted to the root `package.json`**: `typescript`, `eslint` + its plugins, `@types/node`/`react`/`react-dom`, `@tailwindcss/vite`, `globals`. If two packages need the same _tooling_ dependency, add it at the root, not per-package. Actual runtime libraries (`react`, `zod`, `pg`, etc.) stay declared in whichever package imports them, even when versions happen to match across packages.
 - Internal package references use the `workspace:*` protocol (e.g. `"@package/db": "workspace:*"`) — the dependency key must match the target's real `"name"` field, not its folder name.
 
 ## Engineering practices
 
 - **Verify with the tool, not by eyeballing.** After any non-trivial change, run `bunx tsc --noEmit` in the affected package(s) and, for `apps/web`, `bun run build` (catches route-tree/codegen issues `tsc` alone won't). Don't declare something done on the strength of "it looks right."
 - **Never hand-edit generated output.** `packages/db/zenstack/generated/`, `routeTree.gen.ts`, `dist/`, `.turbo/` — anything with a codegen header or produced by a build step gets regenerated, not patched. If generated output looks wrong, fix the source it's generated from.
-- **No phantom dependencies.** If a file imports a package, that package is declared in *that package's* `package.json` — don't rely on hoisting/transitive resolution to paper over a missing declaration (the root-hoisting rule above is only for shared *tooling*, not app code's runtime imports).
-- **Security before shipping to real users.** Any endpoint backed by `ZenStackClient` needs `@@allow`/`@@deny` policies in `schema.zmodel` before it touches real data — an open generic CRUD endpoint is a development convenience, not a production posture. Same for secrets: `.env` files are gitignored repo-wide; never commit real credentials, and prefer documenting *which* env vars a package needs (e.g. in its own `CLAUDE.md` or a `.env.example`) over assuming tribal knowledge.
+- **No phantom dependencies.** If a file imports a package, that package is declared in _that package's_ `package.json` — don't rely on hoisting/transitive resolution to paper over a missing declaration (the root-hoisting rule above is only for shared _tooling_, not app code's runtime imports).
+- **Security before shipping to real users.** Any endpoint backed by `ZenStackClient` needs `@@allow`/`@@deny` policies in `schema.zmodel` before it touches real data — an open generic CRUD endpoint is a development convenience, not a production posture. Same for secrets: `.env` files are gitignored repo-wide; never commit real credentials, and prefer documenting _which_ env vars a package needs (e.g. in its own `CLAUDE.md` or a `.env.example`) over assuming tribal knowledge.
 - **Prefer integration tests over mocks for the data layer.** The existing `apps/server` suite hits a live server + seeded Postgres over real HTTP rather than mocking Prisma/ZenStack — keep that pattern for new tests in this app; a passing mock doesn't prove the ORM/migration/policy layer actually works.
 - **Small, reversible changes.** Prefer additive migrations and new files over risky in-place rewrites; when porting or refactoring, keep the old code path available (as `old/` is) until the new one is verified, rather than deleting first and fixing forward.
 - **Don't build ahead of what's asked.** No speculative abstractions, no extra config options "in case," no new packages/apps unless the task actually needs one — three similar call sites is fine without a shared helper.
@@ -73,6 +73,7 @@ old/         Archived pre-migration app. Reference only — see rules below.
 This project has a graphify knowledge graph at graphify-out/.
 
 Rules:
+
 - Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
 - If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
 - After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)

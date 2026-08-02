@@ -17,7 +17,9 @@ export interface CreateLLMCallParams {
 // `prompt`/`response` land in Json columns — Prisma's InputJsonValue type
 // isn't worth pulling @prisma/client in as a direct dependency just for this
 // cast, so the boundary is a single `as never` here instead.
-export async function createLLMCall(params: CreateLLMCallParams): Promise<string> {
+export async function createLLMCall(
+  params: CreateLLMCallParams,
+): Promise<string> {
   const call = await prisma.lLMCall.create({
     data: {
       runId: params.runId,

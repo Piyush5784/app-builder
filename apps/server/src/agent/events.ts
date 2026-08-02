@@ -29,7 +29,10 @@ export function attachAgentEventServer(server: HttpServer): void {
     logger.info("ws", "client subscribed", { sessionId, socketId: socket.id });
 
     socket.on("disconnect", () => {
-      logger.info("ws", "client unsubscribed", { sessionId, socketId: socket.id });
+      logger.info("ws", "client unsubscribed", {
+        sessionId,
+        socketId: socket.id,
+      });
     });
   });
 }

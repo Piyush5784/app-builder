@@ -1,4 +1,5 @@
-export type WebglShapeName = "sphere" | "cube" | "pyramid" | "torus" | "galaxy" | "wave";
+export type WebglShapeName =
+  "sphere" | "cube" | "pyramid" | "torus" | "galaxy" | "wave";
 
 export type WebglColorScheme = "fire" | "neon" | "nature" | "rainbow";
 

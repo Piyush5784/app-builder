@@ -1,8 +1,14 @@
-import type { ChatMessage, LLMProvider, ProviderResponse, ToolSchema } from "@/agent/types";
+import type {
+  ChatMessage,
+  LLMProvider,
+  ProviderResponse,
+  ToolSchema,
+} from "@/agent/types";
 import { toToolCall } from "@/agent/types";
 import { GEMINI_API_KEY, GEMINI_MODEL } from "@/config";
 
-const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_BASE_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models";
 
 interface GeminiPart {
   text?: string;
@@ -39,7 +45,8 @@ function toGeminiContents(messages: ChatMessage[]): GeminiContent[] {
     if (m.role === "assistant") {
       const parts: GeminiPart[] = [];
       if (m.content) parts.push({ text: m.content });
-      for (const tc of m.toolCalls ?? []) parts.push({ functionCall: { name: tc.name, args: tc.arguments } });
+      for (const tc of m.toolCalls ?? [])
+        parts.push({ functionCall: { name: tc.name, args: tc.arguments } });
       contents.push({ role: "model", parts });
       continue;
     }
@@ -47,7 +54,14 @@ function toGeminiContents(messages: ChatMessage[]): GeminiContent[] {
     if (m.role === "tool") {
       contents.push({
         role: "user",
-        parts: [{ functionResponse: { name: m.name ?? "unknown", response: { content: m.content ?? "" } } }],
+        parts: [
+          {
+            functionResponse: {
+              name: m.name ?? "unknown",
+              response: { content: m.content ?? "" },
+            },
+          },
+        ],
       });
     }
   }
@@ -79,14 +93,17 @@ export const geminiProvider: LLMProvider = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content ?? "" }] } : undefined,
+        systemInstruction: systemMessage
+          ? { parts: [{ text: systemMessage.content ?? "" }] }
+          : undefined,
         contents: toGeminiContents(messages),
         tools: toGeminiTools(tools),
         generationConfig: { temperature: 0.2 },
       }),
     });
 
-    if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
+    if (!res.ok)
+      throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
 
     const data = (await res.json()) as GeminiResponse;
     const parts = data.candidates?.[0]?.content?.parts ?? [];
@@ -95,7 +112,11 @@ export const geminiProvider: LLMProvider = {
     const toolCalls = parts
       .filter((p) => p.functionCall)
       .map((p, i) =>
-        toToolCall(`${Date.now()}-${i}`, p.functionCall!.name, p.functionCall!.args as Record<string, unknown>)
+        toToolCall(
+          `${Date.now()}-${i}`,
+          p.functionCall!.name,
+          p.functionCall!.args as Record<string, unknown>,
+        ),
       );
 
     return {

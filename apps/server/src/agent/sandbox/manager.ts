@@ -21,7 +21,9 @@ export interface SandboxHandle {
   isNew: boolean;
 }
 
-export async function getOrCreateSandbox(sessionId: string): Promise<SandboxHandle> {
+export async function getOrCreateSandbox(
+  sessionId: string,
+): Promise<SandboxHandle> {
   const existingSession = sandboxSessions[sessionId];
 
   if (existingSession && !isExpired(existingSession)) {
@@ -29,17 +31,25 @@ export async function getOrCreateSandbox(sessionId: string): Promise<SandboxHand
       await existingSession.sandbox.setTimeout(SANDBOX_TIMEOUT_MS); // extend the 30 min window
       existingSession.lastActiveAt = Date.now();
       await updateAgentSession(sessionId);
-      logger.info("sandbox", "reused sandbox", { sessionId, sandboxId: existingSession.sandbox.sandboxId });
+      logger.info("sandbox", "reused sandbox", {
+        sessionId,
+        sandboxId: existingSession.sandbox.sandboxId,
+      });
       return { sandbox: existingSession.sandbox, isNew: false };
     } catch {
       // Expected when the old sandbox already died (idle timeout, restart) —
       // not an error worth a stack trace, just move on and create a fresh one.
-      logger.info("sandbox", "previous sandbox is gone, creating a new one", { sessionId });
+      logger.info("sandbox", "previous sandbox is gone, creating a new one", {
+        sessionId,
+      });
       delete sandboxSessions[sessionId];
     }
   }
 
-  logger.info("sandbox", "creating new sandbox", { sessionId, templateId: E2B_TEMPLATE_ID });
+  logger.info("sandbox", "creating new sandbox", {
+    sessionId,
+    templateId: E2B_TEMPLATE_ID,
+  });
 
   const newSandbox = await Sandbox.create(E2B_TEMPLATE_ID, {
     timeoutMs: SANDBOX_TIMEOUT_MS,
@@ -52,7 +62,10 @@ export async function getOrCreateSandbox(sessionId: string): Promise<SandboxHand
 
   await upsertAgentSession(sessionId, newSandbox.sandboxId);
 
-  logger.info("sandbox", "created", { sessionId, sandboxId: newSandbox.sandboxId });
+  logger.info("sandbox", "created", {
+    sessionId,
+    sandboxId: newSandbox.sandboxId,
+  });
 
   return { sandbox: newSandbox, isNew: true };
 }
@@ -73,7 +86,10 @@ export async function destroySandbox(sessionId: string): Promise<void> {
 
   try {
     await session.sandbox.kill();
-    logger.info("sandbox", "killed after error", { sessionId, sandboxId: session.sandbox.sandboxId });
+    logger.info("sandbox", "killed after error", {
+      sessionId,
+      sandboxId: session.sandbox.sandboxId,
+    });
     delete sandboxSessions[sessionId];
   } catch (error) {
     logger.error("sandbox", "failed to kill", {

@@ -3,8 +3,10 @@ import { io, type Socket } from "socket.io-client";
 import type { AgentEvent } from "@package/shared";
 import { BACKEND_URL } from "@/config";
 
-
-export function useAgentEvents(sessionId: string, onEvent: (event: AgentEvent) => void): void {
+export function useAgentEvents(
+  sessionId: string,
+  onEvent: (event: AgentEvent) => void,
+): void {
   const onEventRef = React.useRef(onEvent);
   React.useEffect(() => {
     onEventRef.current = onEvent;

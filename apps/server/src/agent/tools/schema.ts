@@ -8,7 +8,11 @@ export const tools: ToolSchema[] = [
     parameters: {
       type: "object",
       properties: {
-        path: { type: "string", description: "File path relative to the project root, e.g. src/App.tsx" },
+        path: {
+          type: "string",
+          description:
+            "File path relative to the project root, e.g. src/App.tsx",
+        },
         content: { type: "string", description: "Full file content" },
       },
       required: ["path", "content"],
@@ -21,8 +25,14 @@ export const tools: ToolSchema[] = [
     parameters: {
       type: "object",
       properties: {
-        path: { type: "string", description: "File path relative to the project root" },
-        oldString: { type: "string", description: "Exact existing text to find (must match exactly once)" },
+        path: {
+          type: "string",
+          description: "File path relative to the project root",
+        },
+        oldString: {
+          type: "string",
+          description: "Exact existing text to find (must match exactly once)",
+        },
         newString: { type: "string", description: "Text to replace it with" },
       },
       required: ["path", "oldString", "newString"],
@@ -33,7 +43,12 @@ export const tools: ToolSchema[] = [
     description: "Read the full content of a file.",
     parameters: {
       type: "object",
-      properties: { path: { type: "string", description: "File path relative to the project root" } },
+      properties: {
+        path: {
+          type: "string",
+          description: "File path relative to the project root",
+        },
+      },
       required: ["path"],
     },
   },
@@ -42,17 +57,27 @@ export const tools: ToolSchema[] = [
     description: "Delete a file.",
     parameters: {
       type: "object",
-      properties: { path: { type: "string", description: "File path relative to the project root" } },
+      properties: {
+        path: {
+          type: "string",
+          description: "File path relative to the project root",
+        },
+      },
       required: ["path"],
     },
   },
   {
     name: "listFiles",
-    description: "List files and folders under a path, so you know what already exists before editing.",
+    description:
+      "List files and folders under a path, so you know what already exists before editing.",
     parameters: {
       type: "object",
       properties: {
-        path: { type: "string", description: "Directory path relative to the project root. Defaults to root." },
+        path: {
+          type: "string",
+          description:
+            "Directory path relative to the project root. Defaults to root.",
+        },
       },
       required: [],
     },
@@ -63,7 +88,9 @@ export const tools: ToolSchema[] = [
       "Run a shell command in the project directory. Use to install packages or verify the app builds (e.g. npm install, npm run build).",
     parameters: {
       type: "object",
-      properties: { command: { type: "string", description: "Shell command to run" } },
+      properties: {
+        command: { type: "string", description: "Shell command to run" },
+      },
       required: ["command"],
     },
   },

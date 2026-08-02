@@ -1,4 +1,9 @@
-import type { ChatMessage, LLMProvider, ProviderResponse, ToolSchema } from "@/agent/types";
+import type {
+  ChatMessage,
+  LLMProvider,
+  ProviderResponse,
+  ToolSchema,
+} from "@/agent/types";
 import { toToolCall } from "@/agent/types";
 import { logger } from "@/agent/telemetry";
 
@@ -38,7 +43,11 @@ function toOpenAIMessages(messages: ChatMessage[]): OpenAIMessageWire[] {
       };
     }
     if (m.role === "tool") {
-      return { role: "tool", tool_call_id: m.toolCallId, content: m.content ?? "" };
+      return {
+        role: "tool",
+        tool_call_id: m.toolCallId,
+        content: m.content ?? "",
+      };
     }
     return { role: m.role, content: m.content };
   });
@@ -47,7 +56,11 @@ function toOpenAIMessages(messages: ChatMessage[]): OpenAIMessageWire[] {
 function toOpenAITools(tools: ToolSchema[]) {
   return tools.map((t) => ({
     type: "function" as const,
-    function: { name: t.name, description: t.description, parameters: t.parameters },
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.parameters,
+    },
   }));
 }
 
@@ -69,16 +82,27 @@ function safeParseJson(text: string): Record<string, unknown> {
  * response that was actually fine.
  */
 function extractFallbackToolCalls(content: string) {
-  const wrapped = [...content.matchAll(/<tool_call>([\s\S]*?)<\/tool_call>/g)].map((m) => m[1] ?? "");
+  const wrapped = [
+    ...content.matchAll(/<tool_call>([\s\S]*?)<\/tool_call>/g),
+  ].map((m) => m[1] ?? "");
   const candidates = wrapped.length > 0 ? wrapped : [content];
 
   const calls: ReturnType<typeof toToolCall>[] = [];
   for (const [i, candidate] of candidates.entries()) {
     try {
       const parsed = JSON.parse(candidate.trim());
-      if (parsed && typeof parsed === "object" && typeof parsed.name === "string") {
-        const args = typeof parsed.arguments === "object" && parsed.arguments !== null ? parsed.arguments : {};
-        calls.push(toToolCall(`fallback-${Date.now()}-${i}`, parsed.name, args));
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        typeof parsed.name === "string"
+      ) {
+        const args =
+          typeof parsed.arguments === "object" && parsed.arguments !== null
+            ? parsed.arguments
+            : {};
+        calls.push(
+          toToolCall(`fallback-${Date.now()}-${i}`, parsed.name, args),
+        );
       }
     } catch {
       // Not parseable JSON — not a recoverable tool call.
@@ -96,38 +120,51 @@ export interface OpenAICompatOptions {
   maxAttempts?: number;
 }
 
-async function requestOnce(options: OpenAICompatOptions, body: string): Promise<ProviderResponse> {
+async function requestOnce(
+  options: OpenAICompatOptions,
+  body: string,
+): Promise<ProviderResponse> {
   const res = await fetch(options.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...options.headers },
     body,
   });
 
-  if (!res.ok) throw new Error(`${options.providerLabel} error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(
+      `${options.providerLabel} error ${res.status}: ${await res.text()}`,
+    );
 
   const data = (await res.json()) as OpenAIChatResponse;
 
-  if (data.error) throw new Error(`${options.providerLabel} error: ${data.error.message}`);
+  if (data.error)
+    throw new Error(`${options.providerLabel} error: ${data.error.message}`);
 
   const message = data.choices?.[0]?.message;
   if (!message) {
-    throw new Error(`${options.providerLabel} returned no message. Raw response: ${JSON.stringify(data).slice(0, 500)}`);
+    throw new Error(
+      `${options.providerLabel} returned no message. Raw response: ${JSON.stringify(data).slice(0, 500)}`,
+    );
   }
 
   const tokensIn = data.usage?.prompt_tokens;
   const tokensOut = data.usage?.completion_tokens;
 
   const toolCalls = (message.tool_calls ?? []).map((tc) =>
-    toToolCall(tc.id, tc.function.name, safeParseJson(tc.function.arguments))
+    toToolCall(tc.id, tc.function.name, safeParseJson(tc.function.arguments)),
   );
 
   if (toolCalls.length === 0 && message.content) {
     const recovered = extractFallbackToolCalls(message.content);
     if (recovered.length > 0) {
-      logger.warn("provider", "model put tool call(s) in content instead of tool_calls, recovered", {
-        provider: options.providerLabel,
-        recoveredCount: recovered.length,
-      });
+      logger.warn(
+        "provider",
+        "model put tool call(s) in content instead of tool_calls, recovered",
+        {
+          provider: options.providerLabel,
+          recoveredCount: recovered.length,
+        },
+      );
       return { content: null, toolCalls: recovered, tokensIn, tokensOut };
     }
 
@@ -135,7 +172,7 @@ async function requestOnce(options: OpenAICompatOptions, body: string): Promise<
     // a genuinely broken response, worth retrying rather than accepting.
     if (/<tool_call>|<function=/.test(message.content)) {
       throw new Error(
-        `${options.providerLabel} emitted a malformed tool call as text instead of tool_calls: ${message.content.slice(0, 300)}`
+        `${options.providerLabel} emitted a malformed tool call as text instead of tool_calls: ${message.content.slice(0, 300)}`,
       );
     }
   }
@@ -148,7 +185,9 @@ async function requestOnce(options: OpenAICompatOptions, body: string): Promise<
  * Ollama's /v1 endpoint, etc.) is the same client with a different URL/headers/model —
  * so it's one factory, not one file per provider.
  */
-export function createOpenAICompatProvider(options: OpenAICompatOptions): LLMProvider {
+export function createOpenAICompatProvider(
+  options: OpenAICompatOptions,
+): LLMProvider {
   return {
     providerLabel: options.providerLabel,
     model: options.model,
@@ -182,7 +221,9 @@ export function createOpenAICompatProvider(options: OpenAICompatOptions): LLMPro
         }
       }
 
-      throw lastError instanceof Error ? lastError : new Error(String(lastError));
+      throw lastError instanceof Error
+        ? lastError
+        : new Error(String(lastError));
     },
   };
 }

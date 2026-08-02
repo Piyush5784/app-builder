@@ -129,7 +129,8 @@ function generateGalaxy(count: number, size: number): Float32Array {
     const spread = (Math.random() - 0.5) * armWidth * (1 - radius / size);
     const theta = angle + spread;
     points[i * 3] = radius * Math.cos(theta);
-    points[i * 3 + 1] = (Math.random() - 0.5) * size * 0.1 * (1 - (radius / size) * bulgeFactor);
+    points[i * 3 + 1] =
+      (Math.random() - 0.5) * size * 0.1 * (1 - (radius / size) * bulgeFactor);
     points[i * 3 + 2] = radius * Math.sin(theta);
   }
   return points;
@@ -145,13 +146,20 @@ function generateWave(count: number, size: number): Float32Array {
     const dist = Math.sqrt(u * u + v * v);
     const angle = Math.atan2(v, u);
     points[i * 3] = u * size;
-    points[i * 3 + 1] = Math.sin(dist * Math.PI * frequency) * Math.cos(angle * 2) * waveScale * (1 - dist);
+    points[i * 3 + 1] =
+      Math.sin(dist * Math.PI * frequency) *
+      Math.cos(angle * 2) *
+      waveScale *
+      (1 - dist);
     points[i * 3 + 2] = v * size;
   }
   return points;
 }
 
-const GENERATORS: Record<WebglShapeName, (count: number, size: number) => Float32Array> = {
+const GENERATORS: Record<
+  WebglShapeName,
+  (count: number, size: number) => Float32Array
+> = {
   sphere: generateSphere,
   cube: generateCube,
   pyramid: generatePyramid,
@@ -160,8 +168,19 @@ const GENERATORS: Record<WebglShapeName, (count: number, size: number) => Float3
   wave: generateWave,
 };
 
-export const SHAPE_SEQUENCE: WebglShapeName[] = ["sphere", "cube", "pyramid", "torus", "galaxy", "wave"];
+export const SHAPE_SEQUENCE: WebglShapeName[] = [
+  "sphere",
+  "cube",
+  "pyramid",
+  "torus",
+  "galaxy",
+  "wave",
+];
 
-export function getShapePoints(shape: WebglShapeName, count: number, size: number): Float32Array {
+export function getShapePoints(
+  shape: WebglShapeName,
+  count: number,
+  size: number,
+): Float32Array {
   return GENERATORS[shape](count, size);
 }

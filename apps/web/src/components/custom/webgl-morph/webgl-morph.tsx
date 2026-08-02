@@ -3,7 +3,10 @@ import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { getShapePoints, SHAPE_SEQUENCE } from "@/components/custom/webgl-morph/shape-generators";
+import {
+  getShapePoints,
+  SHAPE_SEQUENCE,
+} from "@/components/custom/webgl-morph/shape-generators";
 import { getStarTexture } from "@/components/custom/webgl-morph/star-texture";
 import {
   BLOOM_RADIUS,
@@ -29,7 +32,13 @@ import {
   PARTICLE_SIZE_RANGE,
   SWIRL_FACTOR,
 } from "@/components/custom/webgl-morph/constants";
-import { clamp, easeInOutCubic, mulberry32, noise3D, randRange } from "@/utils/particle-math";
+import {
+  clamp,
+  easeInOutCubic,
+  mulberry32,
+  noise3D,
+  randRange,
+} from "@/utils/particle-math";
 import type { WebglColorScheme, WebglMorphProps } from "@/types/webgl-morph";
 
 export function WebglMorph({
@@ -52,7 +61,8 @@ export function WebglMorph({
   const colorSchemeRef = useRef<WebglColorScheme>(colorScheme);
   const triggerMorphRef = useRef<() => void>(() => {});
   const repaintRef = useRef<() => void>(() => {});
-  const [activeScheme, setActiveScheme] = useState<WebglColorScheme>(colorScheme);
+  const [activeScheme, setActiveScheme] =
+    useState<WebglColorScheme>(colorScheme);
   const [shapeLabel, setShapeLabel] = useState<string>(SHAPE_SEQUENCE[0]);
   const [isMorphingUi, setIsMorphingUi] = useState(false);
 
@@ -69,13 +79,23 @@ export function WebglMorph({
 
     const canvas = document.createElement("canvas");
     container.appendChild(canvas);
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.1;
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), bloomStrength, BLOOM_RADIUS, BLOOM_THRESHOLD);
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(1, 1),
+      bloomStrength,
+      BLOOM_RADIUS,
+      BLOOM_THRESHOLD,
+    );
     composer.addPass(bloomPass);
 
     scene.add(new THREE.AmbientLight(0x404060));
@@ -107,9 +127,18 @@ export function WebglMorph({
       starColors.push(color.r, color.g, color.b);
     }
     const starGeometry = new THREE.BufferGeometry();
-    starGeometry.setAttribute("position", new THREE.Float32BufferAttribute(starVertices, 3));
-    starGeometry.setAttribute("color", new THREE.Float32BufferAttribute(starColors, 3));
-    starGeometry.setAttribute("size", new THREE.Float32BufferAttribute(starSizes, 1));
+    starGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(starVertices, 3),
+    );
+    starGeometry.setAttribute(
+      "color",
+      new THREE.Float32BufferAttribute(starColors, 3),
+    );
+    starGeometry.setAttribute(
+      "size",
+      new THREE.Float32BufferAttribute(starSizes, 1),
+    );
     const starMaterial = new THREE.ShaderMaterial({
       uniforms: { pointTexture: { value: starTexture } },
       vertexShader: `
@@ -135,7 +164,9 @@ export function WebglMorph({
     scene.add(new THREE.Points(starGeometry, starMaterial));
 
     // --- Particle morph field -----------------------------------------------
-    const targetPositions = SHAPE_SEQUENCE.map((shape) => getShapePoints(shape, particleCount, shapeSize));
+    const targetPositions = SHAPE_SEQUENCE.map((shape) =>
+      getShapePoints(shape, particleCount, shapeSize),
+    );
     let currentShapeIndex = 0;
     const currentPositions = new Float32Array(targetPositions[0]);
     const sourcePositions = new Float32Array(targetPositions[0]);
@@ -146,7 +177,11 @@ export function WebglMorph({
     const particleEffectStrengths = new Float32Array(particleCount);
     for (let i = 0; i < particleCount; i++) {
       const rng = mulberry32(i * 9973 + 17);
-      particleSizes[i] = randRange(rng, PARTICLE_SIZE_RANGE[0], PARTICLE_SIZE_RANGE[1]);
+      particleSizes[i] = randRange(
+        rng,
+        PARTICLE_SIZE_RANGE[0],
+        PARTICLE_SIZE_RANGE[1],
+      );
       particleOpacities[i] = 1;
       particleEffectStrengths[i] = 0;
     }
@@ -165,12 +200,24 @@ export function WebglMorph({
           const normZ = (tempVec.z / maxRadius + 1) / 2;
           hue = (normX * 120 + normY * 120 + normZ * 120) % 360;
         } else {
-          hue = THREE.MathUtils.mapLinear(dist, 0, maxRadius, scheme.startHue, scheme.endHue);
+          hue = THREE.MathUtils.mapLinear(
+            dist,
+            0,
+            maxRadius,
+            scheme.startHue,
+            scheme.endHue,
+          );
         }
-        const n = (noise3D(tempVec.x * 0.2, tempVec.y * 0.2, tempVec.z * 0.2) + 1) * 0.5;
+        const n =
+          (noise3D(tempVec.x * 0.2, tempVec.y * 0.2, tempVec.z * 0.2) + 1) *
+          0.5;
         const saturation = clamp(scheme.saturation * (0.9 + n * 0.2), 0, 1);
         const lightness = clamp(scheme.lightness * (0.85 + n * 0.3), 0.1, 0.9);
-        const color = new THREE.Color().setHSL(hue / 360, saturation, lightness);
+        const color = new THREE.Color().setHSL(
+          hue / 360,
+          saturation,
+          lightness,
+        );
         color.toArray(target, i3);
       }
     }
@@ -179,11 +226,26 @@ export function WebglMorph({
     paintColors(colors, currentPositions);
 
     const particlesGeometry = new THREE.BufferGeometry();
-    particlesGeometry.setAttribute("position", new THREE.BufferAttribute(currentPositions, 3));
-    particlesGeometry.setAttribute("size", new THREE.BufferAttribute(particleSizes, 1));
-    particlesGeometry.setAttribute("opacity", new THREE.BufferAttribute(particleOpacities, 1));
-    particlesGeometry.setAttribute("aEffectStrength", new THREE.BufferAttribute(particleEffectStrengths, 1));
-    particlesGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    particlesGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(currentPositions, 3),
+    );
+    particlesGeometry.setAttribute(
+      "size",
+      new THREE.BufferAttribute(particleSizes, 1),
+    );
+    particlesGeometry.setAttribute(
+      "opacity",
+      new THREE.BufferAttribute(particleOpacities, 1),
+    );
+    particlesGeometry.setAttribute(
+      "aEffectStrength",
+      new THREE.BufferAttribute(particleEffectStrengths, 1),
+    );
+    particlesGeometry.setAttribute(
+      "color",
+      new THREE.BufferAttribute(colors, 3),
+    );
 
     const particlesMaterial = new THREE.ShaderMaterial({
       uniforms: { pointTexture: { value: starTexture } },
@@ -220,7 +282,10 @@ export function WebglMorph({
       vertexColors: true,
     });
 
-    const particleSystem = new THREE.Points(particlesGeometry, particlesMaterial);
+    const particleSystem = new THREE.Points(
+      particlesGeometry,
+      particlesMaterial,
+    );
     scene.add(particleSystem);
 
     // --- Morph orchestration -------------------------------------------------
@@ -248,9 +313,18 @@ export function WebglMorph({
         sourceVec.fromArray(sourcePositions, i3);
         targetVec.fromArray(nextTarget, i3);
         swarmVec.lerpVectors(sourceVec, targetVec, 0.5);
-        offsetDir.set(noise3D(i * 0.05, 10, 10), noise3D(20, i * 0.05, 20), noise3D(30, 30, i * 0.05)).normalize();
+        offsetDir
+          .set(
+            noise3D(i * 0.05, 10, 10),
+            noise3D(20, i * 0.05, 20),
+            noise3D(30, 30, i * 0.05),
+          )
+          .normalize();
         const distFactor = sourceVec.distanceTo(targetVec) * 0.1 + centerOffset;
-        swarmVec.addScaledVector(offsetDir, distFactor * (0.5 + Math.random() * 0.8));
+        swarmVec.addScaledVector(
+          offsetDir,
+          distFactor * (0.5 + Math.random() * 0.8),
+        );
         swarmPositions[i3] = swarmVec.x;
         swarmPositions[i3 + 1] = swarmVec.y;
         swarmPositions[i3 + 2] = swarmVec.z;
@@ -318,8 +392,10 @@ export function WebglMorph({
       camera.position.z = Math.cos(orbitAngle) * cameraDistance;
       camera.lookAt(scene.position);
 
-      const positions = particlesGeometry.attributes.position.array as Float32Array;
-      const effectStrengths = particlesGeometry.attributes.aEffectStrength.array as Float32Array;
+      const positions = particlesGeometry.attributes.position
+        .array as Float32Array;
+      const effectStrengths = particlesGeometry.attributes.aEffectStrength
+        .array as Float32Array;
 
       if (isMorphing) {
         const rawT = clamp((t - morphStart) / (morphEnd - morphStart), 0, 1);
@@ -344,17 +420,36 @@ export function WebglMorph({
           if (swirl > 0.01) {
             const delta = tempVec.subVectors(bezPos, sourceVec);
             swirlAxis
-              .set(noise3D(i * 0.02, elapsed * 0.1, 0), noise3D(0, i * 0.02, elapsed * 0.1 + 5), noise3D(elapsed * 0.1 + 10, 0, i * 0.02))
+              .set(
+                noise3D(i * 0.02, elapsed * 0.1, 0),
+                noise3D(0, i * 0.02, elapsed * 0.1 + 5),
+                noise3D(elapsed * 0.1 + 10, 0, i * 0.02),
+              )
               .normalize();
-            delta.applyAxisAngle(swirlAxis, swirl * (0.5 + Math.random() * 0.5));
+            delta.applyAxisAngle(
+              swirlAxis,
+              swirl * (0.5 + Math.random() * 0.5),
+            );
             bezPos.copy(sourceVec).add(delta);
           }
 
           if (noiseAmount > 0.01) {
             noiseOffsetVec.set(
-              noise3D(bezPos.x * NOISE_FREQUENCY + noiseTime, bezPos.y * NOISE_FREQUENCY, bezPos.z * NOISE_FREQUENCY),
-              noise3D(bezPos.x * NOISE_FREQUENCY + 100, bezPos.y * NOISE_FREQUENCY + noiseTime, bezPos.z * NOISE_FREQUENCY + 100),
-              noise3D(bezPos.x * NOISE_FREQUENCY + 200, bezPos.y * NOISE_FREQUENCY + 200, bezPos.z * NOISE_FREQUENCY + noiseTime),
+              noise3D(
+                bezPos.x * NOISE_FREQUENCY + noiseTime,
+                bezPos.y * NOISE_FREQUENCY,
+                bezPos.z * NOISE_FREQUENCY,
+              ),
+              noise3D(
+                bezPos.x * NOISE_FREQUENCY + 100,
+                bezPos.y * NOISE_FREQUENCY + noiseTime,
+                bezPos.z * NOISE_FREQUENCY + 100,
+              ),
+              noise3D(
+                bezPos.x * NOISE_FREQUENCY + 200,
+                bezPos.y * NOISE_FREQUENCY + 200,
+                bezPos.z * NOISE_FREQUENCY + noiseTime,
+              ),
             );
             bezPos.addScaledVector(noiseOffsetVec, noiseAmount);
           }
@@ -379,9 +474,21 @@ export function WebglMorph({
           sourceVec.fromArray(sourcePositions, i3);
           tempVec.copy(sourceVec).multiplyScalar(breathe);
           noiseOffsetVec.set(
-            noise3D(tempVec.x * NOISE_FREQUENCY + flowTime, tempVec.y * NOISE_FREQUENCY, tempVec.z * NOISE_FREQUENCY),
-            noise3D(tempVec.x * NOISE_FREQUENCY + 10, tempVec.y * NOISE_FREQUENCY + flowTime, tempVec.z * NOISE_FREQUENCY + 10),
-            noise3D(tempVec.x * NOISE_FREQUENCY + 20, tempVec.y * NOISE_FREQUENCY + 20, tempVec.z * NOISE_FREQUENCY + flowTime),
+            noise3D(
+              tempVec.x * NOISE_FREQUENCY + flowTime,
+              tempVec.y * NOISE_FREQUENCY,
+              tempVec.z * NOISE_FREQUENCY,
+            ),
+            noise3D(
+              tempVec.x * NOISE_FREQUENCY + 10,
+              tempVec.y * NOISE_FREQUENCY + flowTime,
+              tempVec.z * NOISE_FREQUENCY + 10,
+            ),
+            noise3D(
+              tempVec.x * NOISE_FREQUENCY + 20,
+              tempVec.y * NOISE_FREQUENCY + 20,
+              tempVec.z * NOISE_FREQUENCY + flowTime,
+            ),
           );
           tempVec.addScaledVector(noiseOffsetVec, IDLE_FLOW_STRENGTH);
           bezPos.fromArray(positions, i3).lerp(tempVec, 0.05);
@@ -409,7 +516,16 @@ export function WebglMorph({
     };
     // colorScheme is intentionally excluded — it's synced into colorSchemeRef
     // by the effect below and repainted in place, not by rebuilding the scene.
-  }, [particleCount, shapeSize, autoMorph, morphInterval, morphDuration, starCount, bloomStrength, cameraDistance]);
+  }, [
+    particleCount,
+    shapeSize,
+    autoMorph,
+    morphInterval,
+    morphDuration,
+    starCount,
+    bloomStrength,
+    cameraDistance,
+  ]);
 
   // Imperative sync of the live scene when `colorScheme` changes from outside
   // — a real external-system update, so this belongs in an effect.
@@ -433,7 +549,8 @@ export function WebglMorph({
     repaintRef.current();
   }
 
-  const positionClass = position === "background" ? "fixed inset-0 -z-10" : "absolute inset-0";
+  const positionClass =
+    position === "background" ? "fixed inset-0 -z-10" : "absolute inset-0";
 
   return (
     <div
@@ -470,7 +587,9 @@ export function WebglMorph({
                   aria-label={`${scheme} color scheme`}
                   onClick={() => handlePickScheme(scheme)}
                   className={`size-6 rounded-full border-2 transition-transform ${
-                    activeScheme === scheme ? "scale-110 border-white" : "border-white/25 hover:scale-105"
+                    activeScheme === scheme
+                      ? "scale-110 border-white"
+                      : "border-white/25 hover:scale-105"
                   }`}
                   style={{ background: COLOR_SCHEME_SWATCHES[scheme] }}
                 />

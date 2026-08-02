@@ -1,6 +1,10 @@
 import { prisma } from "@package/db";
 
-export async function createAgentRun(sessionId: string, provider: string, prompt: string): Promise<string> {
+export async function createAgentRun(
+  sessionId: string,
+  provider: string,
+  prompt: string,
+): Promise<string> {
   const run = await prisma.agentRun.create({
     data: { sessionId, provider, prompt },
   });

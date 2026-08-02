@@ -2,7 +2,12 @@ import type { ToolCall, ToolName } from "@/agent/types";
 
 // Only these mutate sandbox state — readFile/listFiles are pure reads and
 // never need replaying.
-const MUTATING_TOOLS = new Set<ToolName>(["writeFile", "editFile", "deleteFile", "runCommand"]);
+const MUTATING_TOOLS = new Set<ToolName>([
+  "writeFile",
+  "editFile",
+  "deleteFile",
+  "runCommand",
+]);
 
 export function isMutatingTool(name: ToolName): boolean {
   return MUTATING_TOOLS.has(name);

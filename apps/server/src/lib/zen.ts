@@ -9,4 +9,3 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const zen = new ZenStackClient(schema, {
   dialect: new PostgresDialect({ pool }),
 }).$use(new PolicyPlugin());
-

@@ -10,7 +10,9 @@ export interface CreateToolInvocationParams {
   durationMs: number;
 }
 
-export async function createToolInvocation(params: CreateToolInvocationParams): Promise<void> {
+export async function createToolInvocation(
+  params: CreateToolInvocationParams,
+): Promise<void> {
   await prisma.toolInvocation.create({
     data: {
       sessionId: params.sessionId,

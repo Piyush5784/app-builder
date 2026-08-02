@@ -10,7 +10,10 @@ function resolvePath(pathInput: string | undefined): string {
   return `${E2B_APP_DIR}/${cleaned}`.replace(/\/$/, "");
 }
 
-export async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<string> {
+export async function executeTool(
+  sandbox: Sandbox,
+  call: ToolCall,
+): Promise<string> {
   logger.info("tool", "calling", { tool: call.name, args: call.arguments });
 
   try {
@@ -34,7 +37,10 @@ export async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<str
           return `Error: oldString matches ${occurrences} times in ${path}. Make it more specific so it matches exactly once.`;
         }
 
-        const updated = text.replace(call.arguments.oldString, call.arguments.newString);
+        const updated = text.replace(
+          call.arguments.oldString,
+          call.arguments.newString,
+        );
         await sandbox.files.write(path, updated);
         return `Edited ${path}`;
       }
@@ -54,7 +60,11 @@ export async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<str
       case "listFiles": {
         const path = resolvePath(call.arguments.path);
         const entries = await sandbox.files.list(path);
-        return entries.map((e) => `${e.type === "dir" ? "d" : "f"} ${e.name}`).join("\n") || "(empty)";
+        return (
+          entries
+            .map((e) => `${e.type === "dir" ? "d" : "f"} ${e.name}`)
+            .join("\n") || "(empty)"
+        );
       }
 
       case "runCommand": {
@@ -84,8 +94,13 @@ export async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<str
  * in order, to rebuild the state a dead sandbox had. Used when a session's
  * sandbox died (idle timeout, crash) and a new one was just created.
  */
-export async function replayEvents(sandbox: Sandbox, calls: ToolCall[]): Promise<void> {
-  logger.info("tool", "replaying recorded events on fresh sandbox", { count: calls.length });
+export async function replayEvents(
+  sandbox: Sandbox,
+  calls: ToolCall[],
+): Promise<void> {
+  logger.info("tool", "replaying recorded events on fresh sandbox", {
+    count: calls.length,
+  });
 
   for (const call of calls) {
     const output = await executeTool(sandbox, call);

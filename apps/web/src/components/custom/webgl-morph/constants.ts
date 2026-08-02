@@ -31,11 +31,17 @@ export const COLOR_SCHEMES: Record<
   rainbow: { startHue: 0, endHue: 360, saturation: 0.9, lightness: 0.6 },
 };
 
-export const COLOR_SCHEME_NAMES: WebglColorScheme[] = ["fire", "neon", "nature", "rainbow"];
+export const COLOR_SCHEME_NAMES: WebglColorScheme[] = [
+  "fire",
+  "neon",
+  "nature",
+  "rainbow",
+];
 
 export const COLOR_SCHEME_SWATCHES: Record<WebglColorScheme, string> = {
   fire: "linear-gradient(to bottom right, #ff4500, #ffcc00)",
   neon: "linear-gradient(to bottom right, #ff00ff, #00ffff)",
   nature: "linear-gradient(to bottom right, #00ff00, #66ffcc)",
-  rainbow: "linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)",
+  rainbow:
+    "linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)",
 };

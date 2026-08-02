@@ -1,4 +1,9 @@
-import { Router, type Request, type Response, type NextFunction } from "express";
+import {
+  Router,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import { runAgent, getSandboxUrl, type ProviderName } from "@/agent";
 import { ApiError, asyncHandler } from "@/middleware/error-handler";
 import { normalLimiter } from "@/middleware/rate-limit";
@@ -19,43 +24,56 @@ agentRouter.get(
 
     const result = await getSandboxUrl(sessionId);
     res.status(200).json(createSuccessResponse(result));
-  })
+  }),
 );
 
 // Not wrapped in asyncHandler — this responds twice over the run's lifetime
 // (early with the preview URL once the sandbox is ready, then either not at
 // all again or, if the early response never fired, with the final result),
 // which doesn't fit asyncHandler's "one promise, one response" shape.
-agentRouter.post("/prompt", normalLimiter, (req: Request, res: Response, next: NextFunction) => {
-  const { prompt, sessionId, provider } = req.body;
+agentRouter.post(
+  "/prompt",
+  normalLimiter,
+  (req: Request, res: Response, next: NextFunction) => {
+    const { prompt, sessionId, provider } = req.body;
 
-  if (!prompt || typeof prompt !== "string") {
-    next(new ApiError(400, "Invalid prompt"));
-    return;
-  }
+    if (!prompt || typeof prompt !== "string") {
+      next(new ApiError(400, "Invalid prompt"));
+      return;
+    }
 
-  const sId = sessionId && typeof sessionId === "string" ? sessionId : crypto.randomUUID();
-  const providerName: ProviderName | undefined =
-    provider === "gemini" || provider === "openrouter" || provider === "ollama" ? provider : undefined;
+    const sId =
+      sessionId && typeof sessionId === "string"
+        ? sessionId
+        : crypto.randomUUID();
+    const providerName: ProviderName | undefined =
+      provider === "gemini" ||
+      provider === "openrouter" ||
+      provider === "ollama"
+        ? provider
+        : undefined;
 
-  let responded = false;
+    let responded = false;
 
-  runAgent(sId, prompt, providerName, (previewUrl) => {
-    responded = true;
-    res.status(200).json(createSuccessResponse({ sessionId: sId, previewUrl }));
-  })
-    .then((result) => {
-      // Only happens if onSandboxReady never fired (e.g. replay failed before
-      // the sandbox was usable) — the early response above covers the normal path.
-      if (!responded) {
-        res.status(200).json(createSuccessResponse(result));
-      }
+    runAgent(sId, prompt, providerName, (previewUrl) => {
+      responded = true;
+      res
+        .status(200)
+        .json(createSuccessResponse({ sessionId: sId, previewUrl }));
     })
-    .catch((error) => {
-      if (!responded) {
-        next(error);
-      }
-    });
-});
+      .then((result) => {
+        // Only happens if onSandboxReady never fired (e.g. replay failed before
+        // the sandbox was usable) — the early response above covers the normal path.
+        if (!responded) {
+          res.status(200).json(createSuccessResponse(result));
+        }
+      })
+      .catch((error) => {
+        if (!responded) {
+          next(error);
+        }
+      });
+  },
+);
 
 export default agentRouter;

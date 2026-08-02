@@ -52,7 +52,10 @@ type ChatItem =
   | { id: string; kind: "user" | "assistant" | "error"; content: string }
   | { id: string; kind: "activity"; activity: ActivityEntry };
 
-const TOOL_ICON: Record<ToolName, React.ComponentType<{ className?: string }>> = {
+const TOOL_ICON: Record<
+  ToolName,
+  React.ComponentType<{ className?: string }>
+> = {
   writeFile: FilePlus2Icon,
   editFile: FileEditIcon,
   readFile: FileTextIcon,
@@ -84,10 +87,18 @@ function ActivityRow({ activity }: { activity: ActivityEntry }) {
   return (
     <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground">
       <Icon className="size-3.5 shrink-0" />
-      <span className="min-w-0 flex-1 truncate">{toolLabel(activity.tool, activity.args)}</span>
-      {activity.status === "pending" && <Spinner className="size-3.5 shrink-0" />}
-      {activity.status === "success" && <CheckIcon className="size-3.5 shrink-0 text-emerald-500" />}
-      {activity.status === "error" && <XIcon className="size-3.5 shrink-0 text-destructive" />}
+      <span className="min-w-0 flex-1 truncate">
+        {toolLabel(activity.tool, activity.args)}
+      </span>
+      {activity.status === "pending" && (
+        <Spinner className="size-3.5 shrink-0" />
+      )}
+      {activity.status === "success" && (
+        <CheckIcon className="size-3.5 shrink-0 text-emerald-500" />
+      )}
+      {activity.status === "error" && (
+        <XIcon className="size-3.5 shrink-0 text-destructive" />
+      )}
     </div>
   );
 }
@@ -106,55 +117,93 @@ function BuildWorkspace() {
   const sandbox = useQuery({
     queryKey: ["agent-sandbox", sessionId],
     queryFn: async () => {
-      const res = await api.get<{ data: SandboxResponse }>(`/agent/sandbox/${sessionId}`);
+      const res = await api.get<{ data: SandboxResponse }>(
+        `/agent/sandbox/${sessionId}`,
+      );
       return res.data.data;
     },
   });
 
   useAgentEvents(
     sessionId,
-    React.useCallback((event: AgentEvent) => {
-      switch (event.type) {
-        case "tool_start": {
-          setItems((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              kind: "activity",
-              activity: { id: crypto.randomUUID(), step: event.step, tool: event.tool, args: event.args, status: "pending" },
-            },
-          ]);
-          break;
-        }
-        case "tool_end": {
-          setItems((prev) => {
-            const next = [...prev];
-            for (let i = next.length - 1; i >= 0; i--) {
-              const item = next[i];
-              if (item.kind === "activity" && item.activity.step === event.step && item.activity.tool === event.tool && item.activity.status === "pending") {
-                next[i] = { ...item, activity: { ...item.activity, status: event.success ? "success" : "error" } };
-                break;
-              }
-            }
-            return next;
-          });
-          break;
-        }
-        case "done": {
-          setIsGenerating(false);
-          if (event.reply) {
-            setItems((prev) => [...prev, { id: crypto.randomUUID(), kind: "assistant", content: event.reply }]);
+    React.useCallback(
+      (event: AgentEvent) => {
+        switch (event.type) {
+          case "tool_start": {
+            setItems((prev) => [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                kind: "activity",
+                activity: {
+                  id: crypto.randomUUID(),
+                  step: event.step,
+                  tool: event.tool,
+                  args: event.args,
+                  status: "pending",
+                },
+              },
+            ]);
+            break;
           }
-          queryClient.invalidateQueries({ queryKey: ["agent-sandbox", sessionId] });
-          break;
+          case "tool_end": {
+            setItems((prev) => {
+              const next = [...prev];
+              for (let i = next.length - 1; i >= 0; i--) {
+                const item = next[i];
+                if (
+                  item.kind === "activity" &&
+                  item.activity.step === event.step &&
+                  item.activity.tool === event.tool &&
+                  item.activity.status === "pending"
+                ) {
+                  next[i] = {
+                    ...item,
+                    activity: {
+                      ...item.activity,
+                      status: event.success ? "success" : "error",
+                    },
+                  };
+                  break;
+                }
+              }
+              return next;
+            });
+            break;
+          }
+          case "done": {
+            setIsGenerating(false);
+            if (event.reply) {
+              setItems((prev) => [
+                ...prev,
+                {
+                  id: crypto.randomUUID(),
+                  kind: "assistant",
+                  content: event.reply,
+                },
+              ]);
+            }
+            queryClient.invalidateQueries({
+              queryKey: ["agent-sandbox", sessionId],
+            });
+            break;
+          }
+          case "error": {
+            setIsGenerating(false);
+            setItems((prev) => [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                kind: "error",
+                content: event.message,
+              },
+            ]);
+            break;
+          }
         }
-        case "error": {
-          setIsGenerating(false);
-          setItems((prev) => [...prev, { id: crypto.randomUUID(), kind: "error", content: event.message }]);
-          break;
-        }
-      }
-    }, [sessionId, queryClient]),
+      },
+      [sessionId, queryClient],
+    ),
   );
 
   const sendPrompt = useMutation({
@@ -167,14 +216,19 @@ function BuildWorkspace() {
     },
     onSuccess: () => setIsGenerating(true),
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to send prompt");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send prompt",
+      );
     },
   });
 
   const handleSend = () => {
     const value = prompt.trim();
     if (!value || sendPrompt.isPending) return;
-    setItems((prev) => [...prev, { id: crypto.randomUUID(), kind: "user", content: value }]);
+    setItems((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), kind: "user", content: value },
+    ]);
     setPrompt("");
     sendPrompt.mutate(value);
   };
@@ -201,7 +255,13 @@ function BuildWorkspace() {
                       <MessageContent>
                         <Bubble
                           align={item.kind === "user" ? "end" : "start"}
-                          variant={item.kind === "user" ? "default" : item.kind === "error" ? "destructive" : "muted"}
+                          variant={
+                            item.kind === "user"
+                              ? "default"
+                              : item.kind === "error"
+                                ? "destructive"
+                                : "muted"
+                          }
                         >
                           <BubbleContent>{item.content}</BubbleContent>
                         </Bubble>
@@ -276,10 +336,19 @@ function BuildWorkspace() {
 
         <div className="flex-1 bg-muted">
           {previewUrl ? (
-            <iframe key={previewUrl} src={previewUrl} className="size-full border-0" title="Live preview" />
+            <iframe
+              key={previewUrl}
+              src={previewUrl}
+              className="size-full border-0"
+              title="Live preview"
+            />
           ) : (
             <div className="flex size-full items-center justify-center text-muted-foreground">
-              {sandbox.isError ? "Failed to load sandbox" : <Spinner className="size-6" />}
+              {sandbox.isError ? (
+                "Failed to load sandbox"
+              ) : (
+                <Spinner className="size-6" />
+              )}
             </div>
           )}
         </div>
