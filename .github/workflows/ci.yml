@@ -89,3 +89,56 @@ jobs:
         env:
           VITE_API_BASE_URL: http://localhost:3001
           VITE_FRONTEND_URL: http://localhost:5173
+
+      - name: Health Check
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_test
+          PORT: "3001"
+          NODE_ENV: test
+          FRONTEND_URL: http://localhost:5173
+          BETTER_AUTH_URL: http://localhost:3001
+          BETTER_AUTH_SECRET: ci-only-dummy-secret-not-used-for-real-auth
+          GOOGLE_CLIENT_ID: ci-dummy
+          GOOGLE_CLIENT_SECRET: ci-dummy
+          RESEND_API_KEY: ci-dummy
+          PROVIDER: ollama
+          OPENROUTER_API_KEY: ci-dummy
+          GEMINI_API_KEY: ci-dummy
+          NVIDIA_API_KEY: ci-dummy
+          E2B_API_KEY: ci-dummy
+          E2B_TEMPLATE_ID: ci-dummy
+          SANDBOX_TIMEOUT_MS: "300000"
+          MAX_AGENT_ITERATIONS: "6"
+        run: |
+          # The server needs a migrated DB to boot cleanly — folded in here
+          # rather than as its own step since that's not a separate check
+          # anymore, just a prerequisite for this one.
+          (cd packages/db && bunx prisma migrate deploy)
+
+          cd apps/server
+          bun run src/index.ts &
+          SERVER_PID=$!
+
+          ok=""
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/health > /dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ -z "$ok" ]; then
+            echo "Server never became healthy on port 3001"
+            kill "$SERVER_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health)
+          echo "GET /health -> $status"
+          kill "$SERVER_PID" 2>/dev/null || true
+
+          if [ "$status" != "200" ]; then
+            echo "Expected 200 from /health, got $status"
+            exit 1
+          fi
