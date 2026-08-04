@@ -1,0 +1,12 @@
+# Archived pre-monorepo app — reference only, not developed further
+old
+
+# Generated output — regenerated on every build, never hand-formatted
+apps/web/src/routeTree.gen.ts
+packages/db/zenstack/generated
+
+node_modules
+generated
+graphify-out
+dist
+.turbo

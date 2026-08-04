@@ -1,0 +1,32 @@
+{
+  "name": "@package/db",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./zenstack/generated/schema.ts",
+    "./schema-lite": "./zenstack/generated/schema-lite.ts"
+  },
+  "scripts": {
+    "generate": "zen generate --lite -o ./zenstack/generated && prisma generate --schema ./zenstack/generated/prisma/schema.prisma",
+    "format": "prettier --write \"**/*.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.5.0",
+    "@types/bun": "latest",
+    "@zenstackhq/cli": "^3.8.3",
+    "better-auth": "^1.6.25",
+    "dotenv": "^17.4.2",
+    "prisma": "^7.8.0"
+  },
+  "dependencies": {
+    "@zenstackhq/orm": "^3.8.3",
+    "@zenstackhq/schema": "^3.8.3",
+    "@zenstackhq/tanstack-query": "^3.8.3",
+    "@prisma/client": "^7.9.0",
+    "@prisma/adapter-pg": "^7.9.0",
+    "pg": "^8.22.0"
+  }
+}

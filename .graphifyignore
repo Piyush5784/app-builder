@@ -1,0 +1,33 @@
+# dependencies / build output
+node_modules
+dist
+out
+build
+.turbo
+.cache
+coverage
+
+# archived pre-monorepo app - reference only, not actively developed
+old
+
+# graphify's own output
+graphify-out
+
+# generated code - regenerated from source, not hand-authored
+**/routeTree.gen.ts
+old/client/.tanstack
+**/src/generated/prisma
+**/zenstack/generated
+generated
+
+# lockfiles / logs / env
+bun.lock
+*.log
+.env
+.env.*
+
+# playwright artifacts
+apps/web/playwright-report
+apps/web/test-results
+apps/web/blob-report
+apps/web/playwright/.auth

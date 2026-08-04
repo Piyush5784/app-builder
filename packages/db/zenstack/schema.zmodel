@@ -1,0 +1,259 @@
+
+datasource db {
+  provider = "postgresql"
+}
+
+plugin prisma {
+  provider = '@core/prisma'
+  output   = './prisma/schema.prisma'
+}
+
+plugin policy {
+  provider = '@zenstackhq/plugin-policy'
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String?
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+
+  username   String?  @unique
+  bio        String?
+  isPrivate  Boolean  @default(false) @map("is_private")
+
+  followersCount Int @default(0) @map("followers_count")
+  followingCount Int @default(0) @map("following_count")
+  postsCount     Int @default(0) @map("posts_count")
+
+  credits Decimal @default(0)
+
+  sessions           Session[]
+  accounts           Account[]
+  agentSessions      AgentSession[]
+  creditTransactions CreditTransaction[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+enum Status {
+  running
+  success
+  failed
+}
+
+enum CreditTransactionType {
+  usage
+  topup
+  refund
+  system_adjustment
+}
+
+enum LogLevel {
+  info
+  warning
+  error
+}
+
+model AgentSession {
+  id           String   @id @default(uuid())
+  name         String?
+  sandboxId    String   @map("sandbox_id")
+  userId       String?  @map("user_id")
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now()) @map("created_at")
+  lastActiveAt DateTime @default(now()) @updatedAt @map("last_active_at")
+
+  runs            AgentRun[]
+  toolInvocations ToolInvocation[]
+
+  // Fast path for a future cleanup sweep ("sessions idle longer than N").
+  @@index([lastActiveAt])
+  @@index([userId])
+  @@deny('all', true)
+  @@map("agent_sessions")
+}
+
+
+model AgentRun {
+  id        String       @id @default(uuid())
+  sessionId String       @map("session_id")
+  session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  provider     String?
+  prompt       String
+  reply        String?
+  status       Status  @default(running)
+  errorMessage String? @map("error_message")
+
+  totalCost Decimal? @map("total_cost")
+
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+
+  llmCalls          LLMCall[]
+  events            AgentEvent[]
+  creditTransactions CreditTransaction[]
+
+  @@index([sessionId, startedAt])
+  @@index([status])
+  @@deny('all', true)
+  @@map("agent_runs")
+}
+
+model LLMCall {
+  id    String   @id @default(uuid())
+  runId String   @map("run_id")
+  run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  provider     String
+  model        String
+  step         Int
+  prompt       Json
+  response     Json?
+  tokensIn     Int?    @map("tokens_in")
+  tokensOut    Int?    @map("tokens_out")
+  success      Boolean
+  errorMessage String? @map("error_message")
+  latencyMs    Int     @map("latency_ms")
+
+  pricingId String?       @map("pricing_id")
+  pricing   ModelPricing? @relation(fields: [pricingId], references: [id], onDelete: SetNull)
+  cost      Decimal?
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  toolInvocations ToolInvocation[]
+
+  @@index([runId, createdAt])
+  @@deny('all', true)
+  @@map("llm_calls")
+}
+
+model ToolInvocation {
+  id        String       @id @default(uuid())
+  sessionId String       @map("session_id")
+  session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  llmCallId String       @map("llm_call_id")
+  llmCall   LLMCall      @relation(fields: [llmCallId], references: [id], onDelete: Cascade)
+
+  toolName     String  @map("tool_name")
+  arguments    Json
+  output       String?
+  status       Status  @default(success)
+  errorMessage String? @map("error_message")
+  durationMs   Int?    @map("duration_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId, createdAt])
+  @@index([llmCallId])
+  @@deny('all', true)
+  @@map("tool_invocations")
+}
+
+
+model AgentEvent {
+  id    String   @id @default(uuid())
+  runId String   @map("run_id")
+  run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  level    LogLevel @default(info)
+  message  String
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([runId, createdAt])
+  @@deny('all', true)
+  @@map("agent_events")
+}
+
+
+model ModelPricing {
+  id       String @id @default(uuid())
+  provider String
+  model    String
+
+  inputPricePerMillion  Decimal @map("input_price_per_million")
+  outputPricePerMillion Decimal @map("output_price_per_million")
+
+  effectiveFrom DateTime  @default(now()) @map("effective_from")
+  effectiveTo   DateTime? @map("effective_to")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  llmCalls  LLMCall[]
+
+  @@index([provider, model, effectiveFrom, effectiveTo])
+  @@deny('all', true)
+  @@map("model_pricing")
+}
+
+model CreditTransaction {
+  id     String @id @default(uuid())
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  runId String?   @map("run_id")
+  run   AgentRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  amount      Decimal
+  type        CreditTransactionType
+  description String?
+  metadata    Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([runId])
+  @@deny('all', true)
+  @@map("credit_transactions")
+}
