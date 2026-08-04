@@ -1,10 +1,9 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { useUser } from "@/hooks/use-user";
-
-const queryClient = new QueryClient();
 
 function RootComponent() {
   useUser();

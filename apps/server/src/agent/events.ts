@@ -1,7 +1,6 @@
 import type { Server as HttpServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { FRONTEND_URL } from "@/config";
-import { logger } from "@/agent/telemetry";
 import type { AgentEvent } from "@package/shared";
 
 export type { AgentEvent };
@@ -26,14 +25,6 @@ export function attachAgentEventServer(server: HttpServer): void {
     }
 
     socket.join(sessionId);
-    logger.info("ws", "client subscribed", { sessionId, socketId: socket.id });
-
-    socket.on("disconnect", () => {
-      logger.info("ws", "client unsubscribed", {
-        sessionId,
-        socketId: socket.id,
-      });
-    });
   });
 }
 

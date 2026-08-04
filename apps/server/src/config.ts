@@ -19,6 +19,9 @@ export const OPENROUTER_MODEL =
   process.env.OPENROUTER_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b:free";
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.0-flash-exp";
+export const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!;
+export const NVIDIA_MODEL =
+  process.env.NVIDIA_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b";
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen3:8b";
 export const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1/chat/completions";

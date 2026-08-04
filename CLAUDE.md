@@ -40,6 +40,7 @@ old/         Archived pre-migration app. Reference only — see rules below.
 - **Never add shadcn/ui primitives locally.** `components.json` is configured so new components go to `packages/ui` (`ui`/`utils` aliases point at `@package/ui/components` / `@package/ui/lib/utils`). Only app-specific code (routes, forms in `components/custom/`, hooks, `lib/`, `utils/`) lives here.
 - Talks to `apps/server` two ways: `utils/axios.ts` (→ `/api/v1/*` custom routes, used by the ported dashboard/feed code) and, where wired up, `@zenstackhq/tanstack-query` hooks (→ `/api/model/*`). `VITE_API_BASE_URL` in `.env` must point at `apps/server` (currently `http://localhost:3001`).
 - The landing page (`routes/index.tsx`) is a **deliberate placeholder** — the real design is a separate, not-yet-done task. Don't treat its current content as final.
+- **React performance/hooks rules live in `apps/web/CLAUDE.md`**, not here — memoization, effect vs. render-time state, data-fetching, and list-rendering conventions specific to this frontend.
 
 ## `packages/ui` (`@package/ui`)
 

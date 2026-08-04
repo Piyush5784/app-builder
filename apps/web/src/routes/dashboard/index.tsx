@@ -1,8 +1,8 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { api } from "@/utils/axios";
+import { invalidateQueriesForTable } from "@/utils/query-cache";
 import { Textarea } from "@package/ui/components/textarea";
 import { Button } from "@package/ui/components/button";
 import { Spinner } from "@package/ui/components/spinner";
@@ -32,16 +32,12 @@ function Dashboard() {
       return res.data.data;
     },
     onSuccess: (data, value) => {
+      invalidateQueriesForTable("AgentSession");
       navigate({
         to: "/dashboard/build/$sessionId",
         params: { sessionId: data.sessionId },
         search: { q: value },
       });
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to start build",
-      );
     },
   });
 
@@ -52,13 +48,13 @@ function Dashboard() {
   };
 
   return (
-    <div className="relative mx-auto flex h-[calc(100vh-2.5rem)] max-w-2xl flex-col items-center justify-center gap-6 px-4">
+    <div className="relative mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-6 px-4">
       <WebglMorph position="background" />
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-white">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           What do you want to build?
         </h1>
-        <p className="text-white">
+        <p className="text-muted-foreground">
           Describe an app or page and it'll be generated for you in a live
           sandbox.
         </p>
@@ -79,7 +75,7 @@ function Dashboard() {
                 handleSubmit();
               }
             }}
-            className="min-h-28 resize-none pr-12 text-base bg-stone-950 text-white"
+            className="min-h-28 resize-none pr-12 text-base"
           />
           <Button
             size="icon-sm"
@@ -98,7 +94,7 @@ function Dashboard() {
               type="button"
               disabled={submit.isPending}
               onClick={() => setPrompt(example)}
-              className="rounded-full border border-border px-3 py-1.5 text-xs  transition-colors hover:bg-muted text-white hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+              className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
             >
               {example}
             </button>
