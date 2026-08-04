@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+
+      - name: Restore Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Generate
+        run: bun run generate
+
+      - name: Check generated files
+        working-directory: packages/db
+        run: |
+          files=(
+            "zenstack/generated/schema.ts"
+            "zenstack/generated/schema-lite.ts"
+            "zenstack/generated/models.ts"
+            "zenstack/generated/input.ts"
+            "zenstack/generated/prisma/schema.prisma"
+          )
+          for f in "${files[@]}"; do
+            if [ ! -s "$f" ]; then
+              echo "Missing or empty generated file: $f"
+              exit 1
+            fi
+          done
+          echo "All expected generated files are present."
+
+      - name: Prisma Validate
+        working-directory: packages/db
+        run: bunx prisma validate
+
+      - name: Format
+        run: bun run format:check
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build
+        run: bun run build
+        env:
+          VITE_API_BASE_URL: http://localhost:3001
+          VITE_FRONTEND_URL: http://localhost:5173
