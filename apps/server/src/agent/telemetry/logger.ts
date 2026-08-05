@@ -1,11 +1,9 @@
-export type LogLevel = "info" | "warn" | "error";
-
-export interface LogFields {
+interface LogFields {
   [key: string]: unknown;
 }
 
 function write(
-  level: LogLevel,
+  level: "info" | "error",
   scope: string,
   message: string,
   fields?: LogFields,
@@ -18,17 +16,17 @@ function write(
     ...fields,
   };
   const line = JSON.stringify(entry);
-
   if (level === "error") console.error(line);
-  else if (level === "warn") console.warn(line);
   else console.log(line);
 }
 
+// Only three things are worth a log line here: which tool ran, which
+// provider/model handled a call, and errors. Sandbox lifecycle, per-step
+// loop chatter, and socket connect/disconnect were pure noise.
 export const logger = {
-  info: (scope: string, message: string, fields?: LogFields) =>
-    write("info", scope, message, fields),
-  warn: (scope: string, message: string, fields?: LogFields) =>
-    write("warn", scope, message, fields),
+  tool: (name: string) => write("info", "tool", name),
+  model: (provider: string, model: string) =>
+    write("info", "model", `${provider}/${model}`),
   error: (scope: string, message: string, fields?: LogFields) =>
     write("error", scope, message, fields),
 };

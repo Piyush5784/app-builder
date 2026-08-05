@@ -6,6 +6,7 @@ import type {
 } from "@/agent/types";
 import { toToolCall } from "@/agent/types";
 import { logger } from "@/agent/telemetry";
+import { extractFallbackToolCalls } from "@/agent/providers/tool-call-recovery";
 
 interface OpenAIToolCallWire {
   id: string;
@@ -73,45 +74,6 @@ function safeParseJson(text: string): Record<string, unknown> {
   }
 }
 
-/**
- * Some models (esp. local/small ones) put the tool call's JSON straight into
- * `content` instead of the real tool_calls field — sometimes wrapped in
- * Qwen-style <tool_call>...</tool_call> tags, sometimes bare like
- * {"name": "listFiles", "arguments": {}}. If it parses cleanly as
- * {name, arguments}, recover it directly instead of burning a retry on a
- * response that was actually fine.
- */
-function extractFallbackToolCalls(content: string) {
-  const wrapped = [
-    ...content.matchAll(/<tool_call>([\s\S]*?)<\/tool_call>/g),
-  ].map((m) => m[1] ?? "");
-  const candidates = wrapped.length > 0 ? wrapped : [content];
-
-  const calls: ReturnType<typeof toToolCall>[] = [];
-  for (const [i, candidate] of candidates.entries()) {
-    try {
-      const parsed = JSON.parse(candidate.trim());
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        typeof parsed.name === "string"
-      ) {
-        const args =
-          typeof parsed.arguments === "object" && parsed.arguments !== null
-            ? parsed.arguments
-            : {};
-        calls.push(
-          toToolCall(`fallback-${Date.now()}-${i}`, parsed.name, args),
-        );
-      }
-    } catch {
-      // Not parseable JSON — not a recoverable tool call.
-    }
-  }
-
-  return calls;
-}
-
 export interface OpenAICompatOptions {
   providerLabel: string; // for log lines, e.g. "openrouter" or "ollama"
   url: string;
@@ -123,11 +85,13 @@ export interface OpenAICompatOptions {
 async function requestOnce(
   options: OpenAICompatOptions,
   body: string,
+  signal?: AbortSignal,
 ): Promise<ProviderResponse> {
   const res = await fetch(options.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...options.headers },
     body,
+    signal,
   });
 
   if (!res.ok)
@@ -157,13 +121,10 @@ async function requestOnce(
   if (toolCalls.length === 0 && message.content) {
     const recovered = extractFallbackToolCalls(message.content);
     if (recovered.length > 0) {
-      logger.warn(
+      logger.error(
         "provider",
         "model put tool call(s) in content instead of tool_calls, recovered",
-        {
-          provider: options.providerLabel,
-          recoveredCount: recovered.length,
-        },
+        { recoveredCount: recovered.length },
       );
       return { content: null, toolCalls: recovered, tokensIn, tokensOut };
     }
@@ -192,7 +153,7 @@ export function createOpenAICompatProvider(
     providerLabel: options.providerLabel,
     model: options.model,
 
-    async chat(messages, tools): Promise<ProviderResponse> {
+    async chat(messages, tools, signal): Promise<ProviderResponse> {
       const body = JSON.stringify({
         model: options.model,
         messages: toOpenAIMessages(messages),
@@ -206,9 +167,12 @@ export function createOpenAICompatProvider(
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-          return await requestOnce(options, body);
+          return await requestOnce(options, body, signal);
         } catch (error) {
           lastError = error;
+          // A deliberate cancellation, not a flaky response — retrying would
+          // just fire another request the caller no longer wants.
+          if (signal?.aborted) break;
           logger.error("provider", "attempt failed", {
             provider: options.providerLabel,
             attempt,

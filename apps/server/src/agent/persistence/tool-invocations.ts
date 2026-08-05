@@ -3,6 +3,7 @@ import type { ToolCall } from "@/agent/types";
 
 export interface CreateToolInvocationParams {
   sessionId: string;
+  runId: string;
   llmCallId: string;
   call: ToolCall;
   output: string;
@@ -16,6 +17,7 @@ export async function createToolInvocation(
   await prisma.toolInvocation.create({
     data: {
       sessionId: params.sessionId,
+      runId: params.runId,
       llmCallId: params.llmCallId,
       toolName: params.call.name,
       arguments: params.call.arguments as never,

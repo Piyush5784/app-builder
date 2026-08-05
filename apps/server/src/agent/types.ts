@@ -70,7 +70,11 @@ export interface ProviderResponse {
 export interface LLMProvider {
   readonly providerLabel: string;
   readonly model: string;
-  chat(messages: ChatMessage[], tools: ToolSchema[]): Promise<ProviderResponse>;
+  chat(
+    messages: ChatMessage[],
+    tools: ToolSchema[],
+    signal?: AbortSignal,
+  ): Promise<ProviderResponse>;
 }
 
 /**

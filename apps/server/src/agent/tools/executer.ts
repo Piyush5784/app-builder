@@ -2,9 +2,9 @@ import type { Sandbox } from "e2b";
 import { logger } from "@/agent/telemetry";
 import type { ToolCall } from "@/agent/types";
 
-const E2B_APP_DIR = "/home/user/app";
+export const E2B_APP_DIR = "/home/user/app";
 
-function resolvePath(pathInput: string | undefined): string {
+export function resolvePath(pathInput: string | undefined): string {
   const cleaned = (pathInput ?? "").replace(/^\/+/, "");
   if (cleaned.startsWith("home/user/app/")) return `/${cleaned}`;
   return `${E2B_APP_DIR}/${cleaned}`.replace(/\/$/, "");
@@ -14,7 +14,7 @@ export async function executeTool(
   sandbox: Sandbox,
   call: ToolCall,
 ): Promise<string> {
-  logger.info("tool", "calling", { tool: call.name, args: call.arguments });
+  logger.tool(call.name);
 
   try {
     switch (call.name) {
@@ -84,7 +84,7 @@ export async function executeTool(
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error("tool", "failed", { tool: call.name, error: message });
+    logger.error("tool", `${call.name} failed`, { error: message });
     return `Error running ${call.name}: ${message}`;
   }
 }
@@ -98,10 +98,6 @@ export async function replayEvents(
   sandbox: Sandbox,
   calls: ToolCall[],
 ): Promise<void> {
-  logger.info("tool", "replaying recorded events on fresh sandbox", {
-    count: calls.length,
-  });
-
   for (const call of calls) {
     const output = await executeTool(sandbox, call);
     if (output.startsWith("Error")) {
@@ -111,6 +107,4 @@ export async function replayEvents(
       throw new Error(`Replay of ${call.name} failed: ${output}`);
     }
   }
-
-  logger.info("tool", "replay finished", { count: calls.length });
 }

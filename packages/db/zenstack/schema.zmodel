@@ -108,21 +108,52 @@ model AgentSession {
   id           String   @id @default(uuid())
   name         String?
   sandboxId    String   @map("sandbox_id")
-  userId       String?  @map("user_id")
-  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now()) @map("created_at")
   lastActiveAt DateTime @default(now()) @updatedAt @map("last_active_at")
 
   runs            AgentRun[]
   toolInvocations ToolInvocation[]
+  sandboxEvents   SandboxEvent[]
+  messages        Message[]
 
-  // Fast path for a future cleanup sweep ("sessions idle longer than N").
   @@index([lastActiveAt])
   @@index([userId])
-  @@deny('all', true)
+  // Reads go through the generic /api/model endpoint (sidebar session
+  // list); writes stay server-only via the plain prisma client in
+  // agent/persistence. Every session has an owner now — only that owner
+  // (via the auth() binding set per-request in app.ts) can read their rows.
+  @@allow('read', auth() != null && userId == auth().id)
+  @@deny('create,update,delete', true)
   @@map("agent_sessions")
 }
 
+enum MessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
+
+model Message {
+  id        String       @id @default(uuid())
+  sessionId String       @map("session_id")
+  session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  seq       Int
+
+  role       MessageRole
+  content    String?
+  toolCalls  Json?   @map("tool_calls")
+  toolCallId String? @map("tool_call_id")
+  name       String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([sessionId, seq])
+  @@deny('all', true)
+  @@map("messages")
+}
 
 model AgentRun {
   id        String       @id @default(uuid())
@@ -134,6 +165,7 @@ model AgentRun {
   reply        String?
   status       Status  @default(running)
   errorMessage String? @map("error_message")
+  cancelRequested Boolean @default(false) @map("cancel_requested")
 
   totalCost Decimal? @map("total_cost")
 
@@ -143,10 +175,13 @@ model AgentRun {
   llmCalls          LLMCall[]
   events            AgentEvent[]
   creditTransactions CreditTransaction[]
+  toolInvocations   ToolInvocation[]
 
   @@index([sessionId, startedAt])
   @@index([status])
-  @@deny('all', true)
+  // Scoped through the owning session — no direct userId on this model.
+  @@allow('read', auth() != null && session.userId == auth().id)
+  @@deny('create,update,delete', true)
   @@map("agent_runs")
 }
 
@@ -182,6 +217,8 @@ model ToolInvocation {
   id        String       @id @default(uuid())
   sessionId String       @map("session_id")
   session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  runId     String       @map("run_id")
+  run       AgentRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
   llmCallId String       @map("llm_call_id")
   llmCall   LLMCall      @relation(fields: [llmCallId], references: [id], onDelete: Cascade)
 
@@ -195,8 +232,13 @@ model ToolInvocation {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([sessionId, createdAt])
+  @@index([runId, createdAt])
   @@index([llmCallId])
-  @@deny('all', true)
+  // Reads go through the generic /api/model endpoint (activity-trace
+  // restore on page refresh); writes stay server-only via plain prisma in
+  // agent/persistence. Scoped through the owning session, same as AgentRun.
+  @@allow('read', auth() != null && session.userId == auth().id)
+  @@deny('create,update,delete', true)
   @@map("tool_invocations")
 }
 
@@ -215,6 +257,24 @@ model AgentEvent {
   @@index([runId, createdAt])
   @@deny('all', true)
   @@map("agent_events")
+}
+
+// Recorded mutating tool calls (writeFile/editFile/deleteFile/runCommand),
+// replayed onto a fresh sandbox when the previous one died — whether that's
+// an E2B-side idle timeout or the server process itself restarting. Was an
+// in-memory Map; moved here so replay survives a server restart too.
+model SandboxEvent {
+  id        String       @id @default(uuid())
+  sessionId String       @map("session_id")
+  session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  toolCall Json @map("tool_call")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId, createdAt])
+  @@deny('all', true)
+  @@map("sandbox_events")
 }
 
 
@@ -239,11 +299,11 @@ model ModelPricing {
 
 model CreditTransaction {
   id     String @id @default(uuid())
-  userId String? @map("user_id")
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  runId String?   @map("run_id")
-  run   AgentRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  runId String   @map("run_id")
+  run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   amount      Decimal
   type        CreditTransactionType

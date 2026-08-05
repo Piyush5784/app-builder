@@ -6,12 +6,15 @@ import {
   OPENROUTER_MODEL,
   OLLAMA_MODEL,
   OLLAMA_BASE_URL,
+  NVIDIA_API_KEY,
+  NVIDIA_MODEL,
   PROVIDER,
 } from "@/config";
 
-export type ProviderName = "openrouter" | "gemini" | "ollama";
+export type ProviderName = "openrouter" | "gemini" | "ollama" | "nvidia";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
+const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 const openRouterProvider = createOpenAICompatProvider({
   providerLabel: "openrouter",
@@ -30,12 +33,23 @@ const ollamaProvider = createOpenAICompatProvider({
   model: OLLAMA_MODEL,
 });
 
+const nvidiaProvider = createOpenAICompatProvider({
+  providerLabel: "nvidia",
+  url: NVIDIA_BASE_URL,
+  model: NVIDIA_MODEL,
+  headers: {
+    Authorization: `Bearer ${NVIDIA_API_KEY}`,
+  },
+});
+
 export function getProvider(name?: ProviderName): LLMProvider {
   switch (name ?? PROVIDER) {
     case "gemini":
       return geminiProvider;
     case "ollama":
       return ollamaProvider;
+    case "nvidia":
+      return nvidiaProvider;
     case "openrouter":
       return openRouterProvider;
     default:

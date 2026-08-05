@@ -11,4 +11,5 @@ export type AgentEvent =
       output: string;
     }
   | { type: "done"; reply: string }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "cancelled" };
