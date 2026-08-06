@@ -1,7 +1,10 @@
 import * as React from "react";
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useParams,
+} from "@tanstack/react-router";
 import Editor from "@monaco-editor/react";
-import { useAgentEvents } from "@/hooks/use-agent-events";
 import { useResolvedTheme } from "@/hooks/use-resolved-theme";
 import { Textarea } from "@package/ui/components/textarea";
 import { Button } from "@package/ui/components/button";
@@ -44,8 +47,11 @@ import {
   ChevronDownIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { AgentEvent } from "@package/shared";
 import type { ChatItem } from "@/routes/dashboard/build/-types";
 import { downloadFile, downloadZip } from "@/routes/dashboard/build/-download";
+import { invalidateQueriesForTable } from "@/utils/query-cache";
+import { WebglMorph } from "@/components/custom/webgl-morph/webgl-morph";
 import {
   useRunsQuery,
   useToolInvocationsQuery,
@@ -61,59 +67,116 @@ import {
 import { ActivityRow } from "@/routes/dashboard/build/-activity-row";
 import { toTreeData, getLanguage } from "@/routes/dashboard/build/-file-tree";
 
+const EXAMPLE_PROMPTS = [
+  "A landing page for a coffee subscription box",
+  "A pricing page with three tiers and a toggle for monthly/yearly",
+  "A dashboard with a sidebar and a table of recent orders",
+];
+
 function BuildWorkspace() {
   const { sessionId } = useParams({ from: "/dashboard/build/$sessionId" });
-  const { q } = Route.useSearch();
+  const navigate = useNavigate();
+  const isNew = sessionId === "new";
 
-  const [items, setItems] = React.useState<ChatItem[]>(() =>
-    q ? [{ id: "initial", kind: "user", content: q }] : [],
-  );
-  const [isGenerating, setIsGenerating] = React.useState(Boolean(q));
+  const [items, setItems] = React.useState<ChatItem[]>([]);
+  const [isGenerating, setIsGenerating] = React.useState(false);
   const [prompt, setPrompt] = React.useState("");
   const [view, setView] = React.useState<"preview" | "code">("preview");
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
   const [isDownloadingZip, setIsDownloadingZip] = React.useState(false);
   const resolvedTheme = useResolvedTheme();
 
-  const runsQuery = useRunsQuery(sessionId);
-  const toolInvocationsQuery = useToolInvocationsQuery(sessionId);
+  // Tracks whether the *current* real sessionId is one we just self-assigned
+  // (this same mount created it and replaced the URL) vs. one the user
+  // navigated to some other way (sidebar, direct link). Only the latter
+  // should reset local chat state — a self-assignment is a continuation of
+  // the exact same live conversation, just with its permanent id attached.
+  const [selfAssignedId, setSelfAssignedId] = React.useState<string | null>(
+    null,
+  );
+  const [prevSessionId, setPrevSessionId] = React.useState(sessionId);
+  const [skipDbSeed, setSkipDbSeed] = React.useState(isNew);
 
-  useHistorySeed(
-    runsQuery.data,
-    toolInvocationsQuery.data,
-    (seededItems, seededIsGenerating) => {
-      setItems(seededItems);
-      setIsGenerating(seededIsGenerating);
-    },
+  if (sessionId !== prevSessionId) {
+    const selfAssigned = sessionId === selfAssignedId;
+    setPrevSessionId(sessionId);
+    setSelfAssignedId(null);
+    if (!selfAssigned) {
+      setItems([]);
+      setIsGenerating(false);
+      setPrompt("");
+    }
+    setSkipDbSeed(selfAssigned || sessionId === "new");
+  }
+
+  const enableHistoryQueries = !isNew && !skipDbSeed;
+  const runsQuery = useRunsQuery(sessionId, enableHistoryQueries);
+  const toolInvocationsQuery = useToolInvocationsQuery(
+    sessionId,
+    enableHistoryQueries,
   );
 
-  const filesQuery = useFilesQuery(sessionId, view === "code");
+  const historySeed = useHistorySeed(runsQuery.data, toolInvocationsQuery.data);
+
+  React.useEffect(() => {
+    if (historySeed.status !== "seeded") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate: historySeed resolves at most once (stable ref), not a render-time derivation
+    setItems(historySeed.items);
+    setIsGenerating(historySeed.isGenerating);
+  }, [historySeed]);
+
+  const filesQuery = useFilesQuery(sessionId, !isNew && view === "code");
   const fileQuery = useFileQuery(
     sessionId,
     selectedPath,
-    view === "code" && Boolean(selectedPath),
+    !isNew && view === "code" && Boolean(selectedPath),
   );
-  const sandbox = useSandboxQuery(sessionId);
+  const sandbox = useSandboxQuery(sessionId, !isNew);
 
-  const handleAgentEvent = useAgentEventHandler(
+  const baseHandleAgentEvent = useAgentEventHandler(
     sessionId,
     setItems,
     setIsGenerating,
   );
-  useAgentEvents(sessionId, handleAgentEvent);
 
-  const sendPrompt = useSendPrompt(sessionId, () => setIsGenerating(true));
+  // Layers "this was the first prompt of a brand-new session" concerns
+  // (URL replace, sidebar refresh) on top of the shared event handler —
+  // every other event still goes straight through unchanged.
+  const handleAgentEvent = React.useCallback(
+    (event: AgentEvent) => {
+      if (event.type === "sandbox_ready" && isNew) {
+        invalidateQueriesForTable("AgentSession");
+        setSelfAssignedId(event.sessionId);
+        navigate({
+          to: "/dashboard/build/$sessionId",
+          params: { sessionId: event.sessionId },
+          replace: true,
+        });
+      }
+      if (event.type === "error" && isNew) {
+        toast.error(event.message);
+      }
+      baseHandleAgentEvent(event);
+    },
+    [isNew, navigate, baseHandleAgentEvent],
+  );
+
+  const sendPrompt = useSendPrompt(
+    isNew ? undefined : sessionId,
+    handleAgentEvent,
+  );
   const cancelGeneration = useCancelGeneration(sessionId);
   useCancelOnEscape(isGenerating, cancelGeneration.mutate);
 
   const handleSend = () => {
     const value = prompt.trim();
-    if (!value || sendPrompt.isPending || isGenerating) return;
+    if (!value || isGenerating) return;
     setItems((prev) => [
       ...prev,
       { id: crypto.randomUUID(), kind: "user", content: value },
     ]);
     setPrompt("");
+    setIsGenerating(true);
     sendPrompt.mutate(value);
   };
 
@@ -133,6 +196,64 @@ function BuildWorkspace() {
   };
 
   const previewUrl = sandbox.data?.previewUrl;
+
+  if (isNew) {
+    return (
+      <div className="relative mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-6 px-4">
+        <WebglMorph position="background" />
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-white">
+            What do you want to build?
+          </h1>
+          <p className="text-white">
+            Describe an app or page and it'll be generated for you in a live
+            sandbox.
+          </p>
+        </div>
+
+        <div className="w-full space-y-3">
+          <div className="relative">
+            <Textarea
+              autoFocus
+              placeholder="Build a landing page for..."
+              value={prompt}
+              disabled={isGenerating}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              className="min-h-28 resize-none pr-12 text-white !bg-black"
+            />
+            <Button
+              size="icon-sm"
+              className="absolute bottom-2.5 right-2.5"
+              disabled={!prompt.trim() || isGenerating}
+              onClick={handleSend}
+            >
+              {isGenerating ? <Spinner /> : <ArrowUpIcon />}
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {EXAMPLE_PROMPTS.map((example) => (
+              <button
+                key={example}
+                type="button"
+                disabled={isGenerating}
+                onClick={() => setPrompt(example)}
+                className="rounded-md bg-white border border-border px-3 py-1.5 text-xs text-black transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
@@ -193,7 +314,7 @@ function BuildWorkspace() {
             <Textarea
               placeholder="Ask for a change..."
               value={prompt}
-              disabled={sendPrompt.isPending || isGenerating}
+              disabled={isGenerating}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -220,10 +341,10 @@ function BuildWorkspace() {
               <Button
                 size="icon-sm"
                 className="absolute bottom-2 right-2"
-                disabled={!prompt.trim() || sendPrompt.isPending}
+                disabled={!prompt.trim()}
                 onClick={handleSend}
               >
-                {sendPrompt.isPending ? <Spinner /> : <ArrowUpIcon />}
+                <ArrowUpIcon />
               </Button>
             )}
           </div>
@@ -393,7 +514,6 @@ function BuildWorkspace() {
                     language={getLanguage(selectedPath)}
                     value={fileQuery.data?.content ?? ""}
                     theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
-
                     options={{
                       readOnly: true,
                       minimap: { enabled: false },
@@ -414,14 +534,6 @@ function BuildWorkspace() {
   );
 }
 
-function BuildWorkspaceRoute() {
-  const { sessionId } = useParams({ from: "/dashboard/build/$sessionId" });
-  return <BuildWorkspace key={sessionId} />;
-}
-
 export const Route = createFileRoute("/dashboard/build/$sessionId")({
-  validateSearch: (search: Record<string, unknown>): { q?: string } => ({
-    q: typeof search.q === "string" ? search.q : undefined,
-  }),
-  component: BuildWorkspaceRoute,
+  component: BuildWorkspace,
 });

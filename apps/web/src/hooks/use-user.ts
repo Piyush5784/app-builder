@@ -270,9 +270,9 @@ export function useUser() {
 
   useEffect(() => {
     if (!isPending && !data?.user) {
-      navigate({
-        to: "/auth/Login",
-      });
+      // navigate({
+      //   to: "/auth/Login",
+      // });
     }
   }, [isPending, data?.user, navigate]);
 

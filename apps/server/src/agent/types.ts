@@ -74,6 +74,10 @@ export interface LLMProvider {
     messages: ChatMessage[],
     tools: ToolSchema[],
     signal?: AbortSignal,
+    // Called with each text chunk as the reply is generated, for live
+    // token streaming over SSE. Optional — providers that can't stream
+    // (Gemini, for now) just call it once with the full text at the end.
+    onToken?: (delta: string) => void,
   ): Promise<ProviderResponse>;
 }
 

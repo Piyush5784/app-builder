@@ -85,7 +85,7 @@ export const geminiProvider: LLMProvider = {
   providerLabel: "gemini",
   model: GEMINI_MODEL,
 
-  async chat(messages, tools, signal): Promise<ProviderResponse> {
+  async chat(messages, tools, signal, onToken): Promise<ProviderResponse> {
     const systemMessage = messages.find((m) => m.role === "system");
     const url = `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -119,6 +119,8 @@ export const geminiProvider: LLMProvider = {
           p.functionCall!.args as Record<string, unknown>,
         ),
       );
+
+    if (textPart) onToken?.(textPart);
 
     return {
       content: textPart,

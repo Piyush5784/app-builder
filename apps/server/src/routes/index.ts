@@ -6,3 +6,4 @@ const allRouter = Router();
 allRouter.use("/agent", agentRouter);
 
 export default allRouter;
+

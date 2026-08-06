@@ -15,7 +15,6 @@ import {
   watchForCancellation,
   type RunWatcher,
 } from "@/agent/core/cancellation";
-import { emitAgentEvent } from "@/agent/events";
 import {
   createAgentRun,
   updateAgentRun,
@@ -26,6 +25,7 @@ import {
 } from "@/agent/persistence";
 import { logger } from "@/agent/telemetry";
 import type { ChatMessage, LLMProvider, ToolSchema } from "@/agent/types";
+import type { AgentEvent } from "@package/shared";
 
 export interface AgentResult {
   sessionId: string;
@@ -36,7 +36,10 @@ export interface AgentResult {
 /**
  * The bounded tool-call loop: ask the model, run whatever tools it asked for,
  * feed results back, repeat until it stops calling tools or we hit the step limit.
- * Mutates `messages` in place so the caller keeps full history.
+ * Mutates `messages` in place so the caller keeps full history. Every event
+ * the caller might care about — tokens, tool calls, completion — goes
+ * through the one `emit` callback, which the route hands us wired straight
+ * to its own HTTP response. Nothing here needs to know that's SSE.
  */
 async function runLoop(
   sessionId: string,
@@ -46,6 +49,7 @@ async function runLoop(
   tools: ToolSchema[],
   messages: ChatMessage[],
   signal: AbortSignal,
+  emit: (event: AgentEvent) => void,
 ): Promise<string> {
   let finalReply = "";
 
@@ -56,13 +60,15 @@ async function runLoop(
     if (signal.aborted) break;
 
     const step = i + 1;
-    emitAgentEvent(sessionId, { type: "step_start", step });
+    emit({ type: "step_start", step });
 
     const promptSnapshot = [...messages];
     const callStartedAt = Date.now();
     let result: Awaited<ReturnType<LLMProvider["chat"]>>;
     try {
-      result = await provider.chat(messages, tools, signal);
+      result = await provider.chat(messages, tools, signal, (delta) =>
+        emit({ type: "token", delta }),
+      );
     } catch (error) {
       await createLLMCall({
         runId,
@@ -113,7 +119,7 @@ async function runLoop(
     for (const call of result.toolCalls) {
       if (signal.aborted) break;
 
-      emitAgentEvent(sessionId, {
+      emit({
         type: "tool_start",
         step,
         tool: call.name,
@@ -131,7 +137,7 @@ async function runLoop(
       });
 
       const success = !output.startsWith("Error");
-      emitAgentEvent(sessionId, {
+      emit({
         type: "tool_end",
         step,
         tool: call.name,
@@ -148,8 +154,6 @@ async function runLoop(
         durationMs,
       });
 
-      // Only log successful, state-mutating calls — replaying a failed edit
-      // or a pure read wouldn't do anything useful if we rebuild from this.
       if (isMutatingTool(call.name) && success) {
         await recordEvent(sessionId, call);
       }
@@ -177,11 +181,11 @@ async function runLoop(
 
   if (signal.aborted) {
     finalReply = finalReply || "Cancelled by user.";
-    emitAgentEvent(sessionId, { type: "cancelled" });
+    emit({ type: "cancelled" });
     return finalReply;
   }
 
-  emitAgentEvent(sessionId, { type: "done", reply: finalReply });
+  emit({ type: "done", reply: finalReply });
   return finalReply;
 }
 
@@ -193,16 +197,8 @@ export async function runAgent(
   sessionId: string,
   userPrompt: string,
   providerName: ProviderName | undefined,
-  // Fired as soon as the sandbox is ready (created/reused + replayed), before
-  // the model loop starts. Lets the caller hand the preview URL to the user
-  // right away instead of waiting for the whole run to finish.
-  onSandboxReady: ((previewUrl: string) => void) | undefined,
-  // True only for a session the route just generated itself (a genuinely new
-  // build) — false for any client-supplied sessionId, which must already
-  // exist or this throws SessionNotFoundError instead of fabricating one.
+  emit: (event: AgentEvent) => void,
   isNewSession: boolean,
-  // The authenticated caller — every session has exactly one owner, checked
-  // against this on every access, not just at creation.
   userId: string,
 ): Promise<AgentResult> {
   const provider = getProvider(providerName);
@@ -246,7 +242,7 @@ export async function runAgent(
       };
     }
 
-    onSandboxReady?.(previewUrl);
+    emit({ type: "sandbox_ready", sessionId, previewUrl });
 
     if (isNewSession) {
       await updateAgentSessionName(sessionId, userPrompt);
@@ -272,11 +268,12 @@ export async function runAgent(
         tools,
         messages,
         watcher.signal,
+        emit,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error("agent", "call failed", { error: message });
-      emitAgentEvent(sessionId, { type: "error", message });
+      emit({ type: "error", message });
       await createAgentEvent(runId, "error", "agent run failed", {
         error: message,
       });

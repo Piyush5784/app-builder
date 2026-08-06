@@ -1,9 +1,4 @@
-import {
-  Router,
-  type Request,
-  type Response,
-  type NextFunction,
-} from "express";
+import { Router, type Request, type Response } from "express";
 import {
   runAgent,
   cancelRun,
@@ -14,8 +9,8 @@ import {
   type ProviderName,
 } from "@/agent";
 import { destroySandbox, SessionNotFoundError } from "@/agent/sandbox";
-import { emitAgentEvent } from "@/agent/events";
 import { logger } from "@/agent/telemetry";
+import type { AgentEvent } from "@package/shared";
 import {
   deleteAgentSession,
   updateAgentSessionName,
@@ -178,8 +173,6 @@ agentRouter.get(
   }),
 );
 
-// Zips every file in the sandbox for a "download all" button. Streamed
-// straight to the response — never buffered fully in memory.
 agentRouter.get(
   "/sandbox/:sessionId/download",
   normalLimiter,
@@ -205,78 +198,56 @@ agentRouter.get(
   }),
 );
 
-// Not wrapped in asyncHandler — this responds twice over the run's lifetime
-// (early with the preview URL once the sandbox is ready, then either not at
-// all again or, if the early response never fired, with the final result),
-// which doesn't fit asyncHandler's "one promise, one response" shape.
 agentRouter.post(
   "/prompt",
   normalLimiter,
-  (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      next(new ApiError(401, "Unauthorized"));
-      return;
-    }
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new ApiError(401, "Unauthorized");
     const userId = req.user.id;
     const { prompt, sessionId, provider } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
-      next(new ApiError(400, "Invalid prompt"));
-      return;
+      throw new ApiError(400, "Invalid prompt");
     }
 
     const isNewSession = !(sessionId && typeof sessionId === "string");
     const sId = isNewSession ? crypto.randomUUID() : sessionId;
+
+    if (!isNewSession) {
+      await requireOwnedSession(sId, userId);
+    }
+
     const providerName: ProviderName | undefined =
       provider === "gemini" ||
       provider === "openrouter" ||
       provider === "ollama" ||
       provider === "nvidia"
         ? provider
-        : "nvidia";
+        : "nvidia"; // default provider
 
-    let responded = false;
 
-    runAgent(
-      sId,
-      prompt,
-      providerName,
-      (previewUrl) => {
-        responded = true;
-        res
-          .status(200)
-          .json(createSuccessResponse({ sessionId: sId, previewUrl }));
-      },
-      isNewSession,
-      userId,
-    )
-      .then((result) => {
-        // Only happens if onSandboxReady never fired (e.g. replay failed before
-        // the sandbox was usable) — the early response above covers the normal path.
-        if (!responded) {
-          res.status(200).json(createSuccessResponse(result));
-        }
-      })
-      .catch((error) => {
-        if (!responded) {
-          next(
-            error instanceof SessionNotFoundError
-              ? new ApiError(404, error.message)
-              : error,
-          );
-          return;
-        }
-        // The HTTP response already went out (early sandbox-ready reply), so
-        // there's no request left to fail — the only way the client learns
-        // about this is the SSE event stream it's already listening on.
-        const message = error instanceof Error ? error.message : String(error);
-        logger.error("agent", "post-response failure in /prompt", {
-          sessionId: sId,
-          error: message,
-        });
-        emitAgentEvent(sId, { type: "error", message });
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    const emit = (event: AgentEvent): void => {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    try {
+      await runAgent(sId, prompt, providerName, emit, isNewSession, userId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error("agent", "prompt stream ended in error", {
+        sessionId: sId,
+        error: message,
       });
-  },
+    } finally {
+      res.end();
+    }
+  }),
 );
 
 export default agentRouter;
