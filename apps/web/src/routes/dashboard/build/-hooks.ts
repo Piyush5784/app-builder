@@ -132,7 +132,8 @@ export function useSendPrompt(
   onEvent: (event: AgentEvent) => void,
 ) {
   return useMutation({
-    mutationFn: (prompt: string) => streamPrompt({ prompt, sessionId }, onEvent),
+    mutationFn: (prompt: string) =>
+      streamPrompt({ prompt, sessionId }, onEvent),
   });
 }
 
@@ -194,10 +195,7 @@ export function useAgentEventHandler(
             }
             const id = crypto.randomUUID();
             streamingIdRef.current = id;
-            return [
-              ...prev,
-              { id, kind: "assistant", content: event.delta },
-            ];
+            return [...prev, { id, kind: "assistant", content: event.delta }];
           });
           break;
         }
@@ -258,7 +256,11 @@ export function useAgentEventHandler(
             if (!event.reply) return prev;
             return [
               ...prev,
-              { id: crypto.randomUUID(), kind: "assistant", content: event.reply },
+              {
+                id: crypto.randomUUID(),
+                kind: "assistant",
+                content: event.reply,
+              },
             ];
           });
           queryClient.invalidateQueries({

@@ -225,7 +225,6 @@ agentRouter.post(
         ? provider
         : "nvidia"; // default provider
 
-
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",

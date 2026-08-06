@@ -149,7 +149,9 @@ async function requestOnceStreaming(
     }
 
     if (parsed.error) {
-      throw new Error(`${options.providerLabel} error: ${parsed.error.message}`);
+      throw new Error(
+        `${options.providerLabel} error: ${parsed.error.message}`,
+      );
     }
 
     if (parsed.usage) {

@@ -39,7 +39,9 @@ export async function streamPrompt(
       const frame = buffer.slice(0, frameEnd);
       buffer = buffer.slice(frameEnd + 2);
 
-      const dataLine = frame.split("\n").find((line) => line.startsWith("data:"));
+      const dataLine = frame
+        .split("\n")
+        .find((line) => line.startsWith("data:"));
       if (!dataLine) continue;
 
       const payload = dataLine.slice("data:".length).trim();
