@@ -23,8 +23,6 @@ import { createSuccessResponse } from "@/types/api-response";
 
 const agentRouter = Router();
 
-// Every route below needs to know who's asking — sessions are owned, and
-// nothing here is public.
 agentRouter.use(AuthMiddleware);
 
 function requireUserId(req: Request): string {
@@ -32,8 +30,6 @@ function requireUserId(req: Request): string {
   return req.user.id;
 }
 
-// SessionNotFoundError means the id doesn't exist (deleted, made up, or the
-// in-memory sandbox map was never populated for it) — a 404, not a 500.
 async function withSessionErrorMapping<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
@@ -45,8 +41,6 @@ async function withSessionErrorMapping<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-// Deliberately indistinguishable from "doesn't exist" — never reveals that
-// a sessionId belongs to someone else.
 async function requireOwnedSession(
   sessionId: string,
   userId: string,
@@ -57,9 +51,6 @@ async function requireOwnedSession(
   }
 }
 
-// Kills the sandbox first (if it's still alive in-memory) so it can't be
-// left running with nothing pointing at it, then removes the DB row —
-// cascades to that session's AgentRun/LLMCall/ToolInvocation history.
 agentRouter.delete(
   "/sessions/:sessionId",
   normalLimiter,
@@ -76,8 +67,6 @@ agentRouter.delete(
   }),
 );
 
-// Manual rename from the sidebar — overrides whatever name the first prompt
-// gave the session (or the null default, if it was somehow never set).
 agentRouter.patch(
   "/sessions/:sessionId",
   normalLimiter,

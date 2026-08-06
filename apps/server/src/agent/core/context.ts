@@ -15,9 +15,6 @@ export async function getOrInitHistory(
     : [{ role: "system", content: systemPrompt }];
 }
 
-// Appends whatever's new since the last save — `messages` is the full,
-// mutated-in-place history for the run, so only the tail beyond what's
-// already persisted actually gets written.
 export async function saveHistory(
   sessionId: string,
   messages: ChatMessage[],

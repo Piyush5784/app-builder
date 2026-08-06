@@ -4,9 +4,19 @@ export async function createAgentRun(
   sessionId: string,
   provider: string,
   prompt: string,
+  failure?: { errorMessage: string },
 ): Promise<string> {
   const run = await prisma.agentRun.create({
-    data: { sessionId, provider, prompt },
+    data: {
+      sessionId,
+      provider,
+      prompt,
+      ...(failure && {
+        status: "failed",
+        errorMessage: failure.errorMessage,
+        finishedAt: new Date(),
+      }),
+    },
   });
   return run.id;
 }

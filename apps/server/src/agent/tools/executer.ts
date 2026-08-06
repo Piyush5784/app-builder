@@ -10,6 +10,7 @@ export function resolvePath(pathInput: string | undefined): string {
   return `${E2B_APP_DIR}/${cleaned}`.replace(/\/$/, "");
 }
 
+// ExecuteTool is a centralized function to execute a tool call against a sandbox. It handles logging, error handling, and returns the output of the tool execution.
 export async function executeTool(
   sandbox: Sandbox,
   call: ToolCall,

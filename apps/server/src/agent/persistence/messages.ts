@@ -34,9 +34,6 @@ export async function countMessages(sessionId: string): Promise<number> {
   return prisma.message.count({ where: { sessionId } });
 }
 
-// Appends only — `existingCount` is the number of rows already persisted
-// (from `countMessages`), so callers pass the full in-memory history and
-// only what's beyond that count actually gets written.
 export async function appendMessages(
   sessionId: string,
   existingCount: number,

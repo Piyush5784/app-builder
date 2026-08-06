@@ -41,12 +41,8 @@ export async function getOrCreateSandbox(
   allowCreate: boolean,
   userId: string,
 ): Promise<SandboxHandle> {
-  // Checked unconditionally, even before the warm in-memory path below —
-  // otherwise a logged-in user who merely knows/guesses another user's
-  // sessionId could ride their still-warm sandbox with no ownership check
-  // at all. Never distinguish "exists but isn't yours" from "doesn't
-  // exist" in the error, so session ids can't be probed for existence.
   const ownerId = await getAgentSessionOwnerId(sessionId);
+
   if (ownerId !== null && ownerId !== userId) {
     throw new SessionNotFoundError(sessionId);
   }
@@ -58,7 +54,7 @@ export async function getOrCreateSandbox(
 
   if (existingSession && !isExpired(existingSession)) {
     try {
-      await existingSession.sandbox.setTimeout(SANDBOX_TIMEOUT_MS); // extend the 30 min window
+      await existingSession.sandbox.setTimeout(SANDBOX_TIMEOUT_MS);
       existingSession.lastActiveAt = Date.now();
       await updateAgentSession(sessionId);
       return { sandbox: existingSession.sandbox, isNew: false };

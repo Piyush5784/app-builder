@@ -33,14 +33,7 @@ export interface AgentResult {
   previewUrl: string;
 }
 
-/**
- * The bounded tool-call loop: ask the model, run whatever tools it asked for,
- * feed results back, repeat until it stops calling tools or we hit the step limit.
- * Mutates `messages` in place so the caller keeps full history. Every event
- * the caller might care about — tokens, tool calls, completion — goes
- * through the one `emit` callback, which the route hands us wired straight
- * to its own HTTP response. Nothing here needs to know that's SSE.
- */
+// Core Loop of the Agent: send messages to the LLM, get tool calls, execute them, and repeat until done or cancelled.
 async function runLoop(
   sessionId: string,
   runId: string,
@@ -53,23 +46,27 @@ async function runLoop(
 ): Promise<string> {
   let finalReply = "";
 
-  const maxSteps =
-    provider.providerLabel === "ollama" ? Infinity : MAX_AGENT_ITERATIONS;
-
-  for (let i = 0; i < maxSteps; i++) {
+  for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
+    // About: if cancel by client happened between ilteration
     if (signal.aborted) break;
 
     const step = i + 1;
+
+    //Emit to Client that a new step has started
     emit({ type: "step_start", step });
 
     const promptSnapshot = [...messages];
+
     const callStartedAt = Date.now();
+
     let result: Awaited<ReturnType<LLMProvider["chat"]>>;
+
     try {
       result = await provider.chat(messages, tools, signal, (delta) =>
         emit({ type: "token", delta }),
       );
     } catch (error) {
+      // For Failer, Mark the LLM Call as Failed
       await createLLMCall({
         runId,
         provider: provider.providerLabel,
@@ -85,12 +82,13 @@ async function runLoop(
             : String(error),
         latencyMs: Date.now() - callStartedAt,
       });
-      // A deliberate cancellation, not a real failure — stop quietly instead
-      // of bubbling up to runAgent's failure path (which would kill the sandbox).
+
+      // Abort: On Failer
       if (signal.aborted) break;
       throw error;
     }
 
+    // Each Step LLM call is recorded in the DB
     const llmCallId = await createLLMCall({
       runId,
       provider: provider.providerLabel,
@@ -129,6 +127,7 @@ async function runLoop(
       const toolStartedAt = Date.now();
       const output = await executeTool(sandbox, call);
       const durationMs = Date.now() - toolStartedAt;
+
       messages.push({
         role: "tool",
         content: output,
@@ -137,6 +136,7 @@ async function runLoop(
       });
 
       const success = !output.startsWith("Error");
+
       emit({
         type: "tool_end",
         step,
@@ -144,6 +144,8 @@ async function runLoop(
         success,
         output,
       });
+
+      // For Each Tool Call, Record the Invocation in the DB
       await createToolInvocation({
         sessionId,
         runId,
@@ -154,31 +156,36 @@ async function runLoop(
         durationMs,
       });
 
+      // If the tool call does CRUD in sandbox, record it in the event log so it can be replayed if the sandbox dies, and a new sandbox is created.
       if (isMutatingTool(call.name) && success) {
         await recordEvent(sessionId, call);
       }
     }
 
+    // About: if cancel by client happened between ilteration
     if (signal.aborted) break;
 
-    if (i === maxSteps - 1) {
+    // If we reach the max iterations, we set a final reply indicating that the step limit was reached.
+    if (i === MAX_AGENT_ITERATIONS - 1) {
       finalReply =
         "Reached the step limit before finishing. Try again with a more specific request.";
       logger.error("loop", "step limit reached without finishing", {
-        maxSteps,
+        maxSteps: MAX_AGENT_ITERATIONS,
       });
+
       await createAgentEvent(
         runId,
         "warning",
         "step limit reached without finishing",
         {
-          maxSteps,
+          maxSteps: MAX_AGENT_ITERATIONS,
         },
       );
       messages.push({ role: "assistant", content: finalReply });
     }
   }
 
+  // Abort: On completion of the loop, if the signal is aborted
   if (signal.aborted) {
     finalReply = finalReply || "Cancelled by user.";
     emit({ type: "cancelled" });
@@ -189,10 +196,7 @@ async function runLoop(
   return finalReply;
 }
 
-/**
- * Resolves everything a caller needs (sandbox, provider, history) and runs
- * the tool-call loop against it.
- */
+// Core Brain of the Agent: orchestrates the sandbox, LLM provider, and tool execution loop, handling errors and cancellations.
 export async function runAgent(
   sessionId: string,
   userPrompt: string,
@@ -202,30 +206,28 @@ export async function runAgent(
   userId: string,
 ): Promise<AgentResult> {
   const provider = getProvider(providerName);
+
+  // Logger: Only for Server Logs
   logger.model(provider.providerLabel, provider.model);
   let watcher: RunWatcher | undefined;
 
   try {
-    let sandbox: Sandbox;
-    let previewUrl: string;
+    let sandboxResult: { sandbox: Sandbox; previewUrl: string };
+
     try {
-      ({ sandbox, previewUrl } = await openSandbox(
-        sessionId,
-        isNewSession,
-        userId,
-      ));
+      // Open or Create the Sandbox for the Session. If it's a new sandbox, replay any prior events onto it.
+      sandboxResult = await openSandbox(sessionId, isNewSession, userId);
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
         throw error;
       }
       const message = error instanceof Error ? error.message : String(error);
+
       try {
-        const runId = await createAgentRun(
-          sessionId,
-          provider.providerLabel,
-          userPrompt,
-        );
-        await updateAgentRun(runId, "", "failed", message);
+        // Mark the run as failed: To keep track Agent Never started due to sandbox failure
+        await createAgentRun(sessionId, provider.providerLabel, userPrompt, {
+          errorMessage: message,
+        });
       } catch (persistError) {
         logger.error("agent", "failed to record failed run", {
           error:
@@ -242,15 +244,20 @@ export async function runAgent(
       };
     }
 
+    const { sandbox, previewUrl } = sandboxResult;
+
     emit({ type: "sandbox_ready", sessionId, previewUrl });
 
+    // Marked the session as having a name with the name
     if (isNewSession) {
       await updateAgentSessionName(sessionId, userPrompt);
     }
 
+    // Get or Initialize the Chat History for the Session, and append the user's prompt to it.
     const messages = await getOrInitHistory(sessionId, SYSTEM_PROMPT);
     messages.push({ role: "user", content: userPrompt });
 
+    // Create a new Agent Run in the DB, and set up a cancellation watcher for it.
     const runId = await createAgentRun(
       sessionId,
       provider.providerLabel,
@@ -259,6 +266,7 @@ export async function runAgent(
     watcher = watchForCancellation(runId);
 
     let reply: string;
+
     try {
       reply = await runLoop(
         sessionId,
@@ -272,13 +280,19 @@ export async function runAgent(
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+
       logger.error("agent", "call failed", { error: message });
+
       emit({ type: "error", message });
+
       await createAgentEvent(runId, "error", "agent run failed", {
         error: message,
       });
+
       await updateAgentRun(runId, "", "failed", message);
+
       await destroySandbox(sessionId);
+
       throw error;
     }
 
