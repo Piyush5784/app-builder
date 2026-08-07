@@ -4,11 +4,6 @@ export interface SandboxResponse {
   previewUrl: string;
 }
 
-export interface PromptResponse {
-  sessionId: string;
-  previewUrl: string;
-}
-
 export interface FileTreeNode {
   path: string;
   name: string;

@@ -81,7 +81,10 @@ export function AppSidebar() {
     onSuccess: (_data, sessionId) => {
       invalidateQueriesForTable("AgentSession");
       if (activeSessionId === sessionId) {
-        navigate({ to: "/dashboard" });
+        navigate({
+          to: "/dashboard/build/$sessionId",
+          params: { sessionId: "new" },
+        });
       }
     },
   });
@@ -117,7 +120,14 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton render={<Link to="/dashboard" />}>
+            <SidebarMenuButton
+              render={
+                <Link
+                  to="/dashboard/build/$sessionId"
+                  params={{ sessionId: "new" }}
+                />
+              }
+            >
               <Sparkles />
               <span>App Builder</span>
             </SidebarMenuButton>
@@ -129,7 +139,14 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton render={<Link to="/dashboard" />}>
+              <SidebarMenuButton
+                render={
+                  <Link
+                    to="/dashboard/build/$sessionId"
+                    params={{ sessionId: "new" }}
+                  />
+                }
+              >
                 <Plus />
                 <span>New build</span>
               </SidebarMenuButton>

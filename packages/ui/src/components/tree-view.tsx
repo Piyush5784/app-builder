@@ -185,10 +185,6 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
       draggedItem,
       renderItem,
       level,
-      // Pulled out only to keep them out of `...props` below — TreeItemProps
-      // inherits the full TreeProps surface, but these are TreeView-level
-      // callbacks/config that would otherwise leak onto the DOM <div> as
-      // unknown attributes.
       /* eslint-disable @typescript-eslint/no-unused-vars */
       onSelectChange,
       expandAll,

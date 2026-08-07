@@ -7,61 +7,77 @@ import type {
   ChatItem,
   FileResponse,
   FileTreeNode,
-  PromptResponse,
   SandboxResponse,
 } from "@/routes/dashboard/build/-types";
 import { buildItemsFromRuns } from "@/routes/dashboard/build/-chat-history";
+import { streamPrompt } from "@/routes/dashboard/build/-stream-prompt";
 
-export function useRunsQuery(sessionId: string) {
-  return useModelQuery("AgentRun").useFindMany({
-    where: { sessionId },
-    orderBy: { startedAt: "asc" },
-    select: {
-      id: true,
-      prompt: true,
-      reply: true,
-      status: true,
-      errorMessage: true,
+export function useRunsQuery(sessionId: string, enabled = true) {
+  return useModelQuery("AgentRun").useFindMany(
+    {
+      where: { sessionId },
+      orderBy: { startedAt: "asc" },
+      select: {
+        id: true,
+        prompt: true,
+        reply: true,
+        status: true,
+        errorMessage: true,
+      },
     },
-  });
+    { enabled },
+  );
 }
 
-export function useToolInvocationsQuery(sessionId: string) {
-  return useModelQuery("ToolInvocation").useFindMany({
-    where: { sessionId },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      runId: true,
-      toolName: true,
-      arguments: true,
-      status: true,
-      createdAt: true,
+export function useToolInvocationsQuery(sessionId: string, enabled = true) {
+  return useModelQuery("ToolInvocation").useFindMany(
+    {
+      where: { sessionId },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        runId: true,
+        toolName: true,
+        arguments: true,
+        status: true,
+        createdAt: true,
+      },
     },
-  });
+    { enabled },
+  );
 }
 
-// Seeds chat state from the query cache exactly once, the moment both
-// queries resolve — done during render (not an effect) so it applies before
-// the first paint instead of costing an extra render+commit. After the first
-// seed, `items`/`isGenerating` are owned entirely by live socket events, so
-// this must never re-run on a refetch.
+export type HistorySeedResult =
+  | { status: "pending" }
+  | { status: "empty" }
+  | { status: "seeded"; items: ChatItem[]; isGenerating: boolean };
+
 export function useHistorySeed(
   runs: ReturnType<typeof useRunsQuery>["data"],
   invocations: ReturnType<typeof useToolInvocationsQuery>["data"],
-  onSeed: (items: ChatItem[], isGenerating: boolean) => void,
-): void {
-  const [hasSeeded, setHasSeeded] = React.useState(false);
+): HistorySeedResult {
+  const hasSeededRef = React.useRef(false);
+  const [result, setResult] = React.useState<HistorySeedResult>({
+    status: "pending",
+  });
 
-  if (!hasSeeded && runs && invocations) {
-    setHasSeeded(true);
-    if (runs.length > 0) {
-      onSeed(
-        buildItemsFromRuns(runs, invocations),
-        runs.some((run) => run.status === "running"),
-      );
+  React.useEffect(() => {
+    if (hasSeededRef.current || !runs || !invocations) return;
+    hasSeededRef.current = true;
+
+    if (runs.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate: hasSeededRef guards this to run at most once, not a render-time derivation
+      setResult({ status: "empty" });
+      return;
     }
-  }
+    setResult({
+      status: "seeded",
+      items: buildItemsFromRuns(runs, invocations),
+      isGenerating: runs.some((run) => run.status === "running"),
+    });
+  }, [runs, invocations]);
+
+  return result;
 }
 
 export function useFilesQuery(sessionId: string, enabled: boolean) {
@@ -95,7 +111,7 @@ export function useFileQuery(
   });
 }
 
-export function useSandboxQuery(sessionId: string) {
+export function useSandboxQuery(sessionId: string, enabled = true) {
   return useQuery({
     queryKey: ["agent-sandbox", sessionId],
     queryFn: async () => {
@@ -104,19 +120,20 @@ export function useSandboxQuery(sessionId: string) {
       );
       return res.data.data;
     },
+    enabled,
   });
 }
 
-export function useSendPrompt(sessionId: string, onSent: () => void) {
+// Sends the prompt and reads the whole run's events off that one request.
+// `sessionId` is optional — a brand-new session doesn't have one yet, the
+// server generates it and reports it back on "sandbox_ready".
+export function useSendPrompt(
+  sessionId: string | undefined,
+  onEvent: (event: AgentEvent) => void,
+) {
   return useMutation({
-    mutationFn: async (value: string) => {
-      const res = await api.post<{ data: PromptResponse }>("/agent/prompt", {
-        prompt: value,
-        sessionId,
-      });
-      return res.data.data;
-    },
-    onSuccess: onSent,
+    mutationFn: (prompt: string) =>
+      streamPrompt({ prompt, sessionId }, onEvent),
   });
 }
 
@@ -144,18 +161,44 @@ export function useCancelOnEscape(
   }, [isGenerating, onCancel]);
 }
 
-// Translates the socket's AgentEvent stream into `items`/`isGenerating`
-// updates for the chat pane.
+// Translates the prompt stream's AgentEvent sequence into `items`/
+// `isGenerating` updates. Tokens accumulate into one "live" assistant
+// bubble that "done" then overwrites with the authoritative final text.
 export function useAgentEventHandler(
   sessionId: string,
   setItems: React.Dispatch<React.SetStateAction<ChatItem[]>>,
   setIsGenerating: (value: boolean) => void,
 ): (event: AgentEvent) => void {
   const queryClient = useQueryClient();
+  const streamingIdRef = React.useRef<string | null>(null);
 
   return React.useCallback(
     (event: AgentEvent) => {
       switch (event.type) {
+        case "sandbox_ready": {
+          queryClient.invalidateQueries({
+            queryKey: ["agent-sandbox", event.sessionId],
+          });
+          break;
+        }
+        case "step_start": {
+          break; // no UI effect — just marks loop progress
+        }
+        case "token": {
+          setItems((prev) => {
+            if (streamingIdRef.current) {
+              return prev.map((item) =>
+                item.id === streamingIdRef.current && item.kind === "assistant"
+                  ? { ...item, content: item.content + event.delta }
+                  : item,
+              );
+            }
+            const id = crypto.randomUUID();
+            streamingIdRef.current = id;
+            return [...prev, { id, kind: "assistant", content: event.delta }];
+          });
+          break;
+        }
         case "tool_start": {
           setItems((prev) => [
             ...prev,
@@ -200,16 +243,26 @@ export function useAgentEventHandler(
         }
         case "done": {
           setIsGenerating(false);
-          if (event.reply) {
-            setItems((prev) => [
+          const streamingId = streamingIdRef.current;
+          streamingIdRef.current = null;
+          setItems((prev) => {
+            if (streamingId) {
+              return prev.map((item) =>
+                item.id === streamingId
+                  ? { ...item, content: event.reply }
+                  : item,
+              );
+            }
+            if (!event.reply) return prev;
+            return [
               ...prev,
               {
                 id: crypto.randomUUID(),
                 kind: "assistant",
                 content: event.reply,
               },
-            ]);
-          }
+            ];
+          });
           queryClient.invalidateQueries({
             queryKey: ["agent-sandbox", sessionId],
           });
@@ -217,27 +270,29 @@ export function useAgentEventHandler(
         }
         case "error": {
           setIsGenerating(false);
+          const streamingId = streamingIdRef.current;
+          streamingIdRef.current = null;
           setItems((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              kind: "error",
-              content: event.message,
-            },
+            ...prev.filter((item) => item.id !== streamingId),
+            { id: crypto.randomUUID(), kind: "error", content: event.message },
           ]);
           break;
         }
         case "cancelled": {
           setIsGenerating(false);
+          const streamingId = streamingIdRef.current;
+          streamingIdRef.current = null;
           setItems((prev) => [
-            ...prev.map((item) =>
-              item.kind === "activity" && item.activity.status === "pending"
-                ? {
-                    ...item,
-                    activity: { ...item.activity, status: "error" as const },
-                  }
-                : item,
-            ),
+            ...prev
+              .filter((item) => item.id !== streamingId)
+              .map((item) =>
+                item.kind === "activity" && item.activity.status === "pending"
+                  ? {
+                      ...item,
+                      activity: { ...item.activity, status: "error" as const },
+                    }
+                  : item,
+              ),
             {
               id: crypto.randomUUID(),
               kind: "assistant",
