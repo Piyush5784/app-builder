@@ -19,9 +19,8 @@ export {
 export { createLLMCall } from "@/agent/persistence/llm-calls";
 export type { CreateLLMCallParams } from "@/agent/persistence/llm-calls";
 export { createAgentEvent } from "@/agent/persistence/agent-events";
-export { createToolInvocation } from "@/agent/persistence/tool-invocations";
-export type { CreateToolInvocationParams } from "@/agent/persistence/tool-invocations";
 export {
-  createSandboxEvent,
-  listSandboxEvents,
-} from "@/agent/persistence/sandbox-events";
+  createToolInvocation,
+  listMutatingToolInvocations,
+} from "@/agent/persistence/tool-invocations";
+export type { CreateToolInvocationParams } from "@/agent/persistence/tool-invocations";

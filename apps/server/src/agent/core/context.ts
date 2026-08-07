@@ -15,6 +15,8 @@ export async function getOrInitHistory(
     : [{ role: "system", content: systemPrompt }];
 }
 
+// DB writes: Message — reads the current row count, then appends only the
+// messages past that count (createMany via appendMessages).
 export async function saveHistory(
   sessionId: string,
   messages: ChatMessage[],

@@ -33,6 +33,7 @@ old/         Archived pre-migration app. Reference only — see rules below.
 - Runs on port **3001** (not 3000 — that's the archived `old/server`, kept distinct in case both need to run side by side during cleanup).
 - **No `@@allow`/`@@deny` access policies exist yet in `packages/db`'s schema.** Both the custom routes (behind `AuthMiddleware`) and the generic `/api/model` endpoint are otherwise unauthenticated/unrestricted at the ORM level. Do not point this at real user data until policies are added.
 - Test suite (`src/tests/`, `bun test`) hits a **live** running server over real HTTP against the seeded DB (not mocked) — start the dev server and make sure the DB is seeded (`bun run generate` + `bunx prisma db seed` in `packages/db`) before running tests.
+- **Sequential, dependent DB writes for one request/flow belong in that flow's primary function** (e.g. `runAgent`/`runLoop` in `src/agent/core/agent-runtime.ts`) — create in table1, use the result, write table2, and so on, all visible in that one function, not scattered across nested helpers. Exception: a write genuinely shared by multiple unrelated primary functions (e.g. `upsertAgentSession` inside `getOrCreateSandbox`, used by both the agent loop and the plain file-browsing routes) stays in its helper rather than being duplicated at every call site — but that helper gets a one-line `// DB writes: Table — what/when` comment so the write is still discoverable without tracing the whole call chain.
 
 ## `apps/web`
 

@@ -9,7 +9,6 @@ import {
   openSandbox,
 } from "@/agent/sandbox";
 import { tools, executeTool } from "@/agent/tools";
-import { isMutatingTool, recordEvent } from "@/agent/core/event-log";
 import { getOrInitHistory, saveHistory } from "@/agent/core/context";
 import {
   watchForCancellation,
@@ -34,6 +33,9 @@ export interface AgentResult {
 }
 
 // Core Loop of the Agent: send messages to the LLM, get tool calls, execute them, and repeat until done or cancelled.
+// DB writes per step: LLMCall (createLLMCall), then per tool call:
+// ToolInvocation (createToolInvocation). AgentEvent only on the step-limit
+// warning.
 async function runLoop(
   sessionId: string,
   runId: string,
@@ -155,11 +157,6 @@ async function runLoop(
         success,
         durationMs,
       });
-
-      // If the tool call does CRUD in sandbox, record it in the event log so it can be replayed if the sandbox dies, and a new sandbox is created.
-      if (isMutatingTool(call.name) && success) {
-        await recordEvent(sessionId, call);
-      }
     }
 
     // About: if cancel by client happened between ilteration
@@ -197,6 +194,9 @@ async function runLoop(
 }
 
 // Core Brain of the Agent: orchestrates the sandbox, LLM provider, and tool execution loop, handling errors and cancellations.
+// DB writes: AgentRun (createAgentRun, then updateAgentRun with the result),
+// AgentSession (updateAgentSessionName on a new session; upsert/refresh via
+// openSandbox — see that function's comment), plus whatever runLoop writes.
 export async function runAgent(
   sessionId: string,
   userPrompt: string,

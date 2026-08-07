@@ -23,11 +23,6 @@ model User {
 
   username   String?  @unique
   bio        String?
-  isPrivate  Boolean  @default(false) @map("is_private")
-
-  followersCount Int @default(0) @map("followers_count")
-  followingCount Int @default(0) @map("following_count")
-  postsCount     Int @default(0) @map("posts_count")
 
   credits Decimal @default(0)
 
@@ -115,15 +110,10 @@ model AgentSession {
 
   runs            AgentRun[]
   toolInvocations ToolInvocation[]
-  sandboxEvents   SandboxEvent[]
   messages        Message[]
 
   @@index([lastActiveAt])
   @@index([userId])
-  // Reads go through the generic /api/model endpoint (sidebar session
-  // list); writes stay server-only via the plain prisma client in
-  // agent/persistence. Every session has an owner now — only that owner
-  // (via the auth() binding set per-request in app.ts) can read their rows.
   @@allow('read', auth() != null && userId == auth().id)
   @@deny('create,update,delete', true)
   @@map("agent_sessions")
@@ -234,9 +224,7 @@ model ToolInvocation {
   @@index([sessionId, createdAt])
   @@index([runId, createdAt])
   @@index([llmCallId])
-  // Reads go through the generic /api/model endpoint (activity-trace
-  // restore on page refresh); writes stay server-only via plain prisma in
-  // agent/persistence. Scoped through the owning session, same as AgentRun.
+  @@index([sessionId, status, toolName])
   @@allow('read', auth() != null && session.userId == auth().id)
   @@deny('create,update,delete', true)
   @@map("tool_invocations")
@@ -257,24 +245,6 @@ model AgentEvent {
   @@index([runId, createdAt])
   @@deny('all', true)
   @@map("agent_events")
-}
-
-// Recorded mutating tool calls (writeFile/editFile/deleteFile/runCommand),
-// replayed onto a fresh sandbox when the previous one died — whether that's
-// an E2B-side idle timeout or the server process itself restarting. Was an
-// in-memory Map; moved here so replay survives a server restart too.
-model SandboxEvent {
-  id        String       @id @default(uuid())
-  sessionId String       @map("session_id")
-  session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  toolCall Json @map("tool_call")
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([sessionId, createdAt])
-  @@deny('all', true)
-  @@map("sandbox_events")
 }
 
 

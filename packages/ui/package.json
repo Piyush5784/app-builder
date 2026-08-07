@@ -33,6 +33,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.20",
     "@turbo/gen": "^2.9.15",
     "tailwindcss": "^4"
   },

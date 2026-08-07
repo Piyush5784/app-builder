@@ -9,11 +9,6 @@ export type UserPayload = {
 
   username?: string | null;
   bio?: string | null;
-  isPrivate: boolean;
-
-  followersCount: number;
-  followingCount: number;
-  postsCount: number;
 };
 
 export type UserSession = {

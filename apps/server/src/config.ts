@@ -14,6 +14,8 @@ export const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 
 // --- AI agent: provider + models ---
 export const PROVIDER = process.env.PROVIDER ?? "openrouter";
+
+
 export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 export const OPENROUTER_MODEL =
   process.env.OPENROUTER_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b:free";

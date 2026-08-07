@@ -16,11 +16,6 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/Login/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
-import { Route as DashboardExploreIndexRouteImport } from './routes/dashboard/Explore/index'
-import { Route as DashboardHomeIndexRouteImport } from './routes/dashboard/Home/index'
-import { Route as DashboardMessagesIndexRouteImport } from './routes/dashboard/Messages/index'
-import { Route as DashboardNotificationsIndexRouteImport } from './routes/dashboard/Notifications/index'
-import { Route as DashboardProfileIndexRouteImport } from './routes/dashboard/Profile/index'
 import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard/Settings/index'
 import { Route as DashboardBuildSessionIdRouteImport } from './routes/dashboard/build/$sessionId'
 
@@ -59,32 +54,6 @@ const AuthResetPasswordIndexRoute = AuthResetPasswordIndexRouteImport.update({
   path: '/reset-password/',
   getParentRoute: () => AuthRouteRoute,
 } as any)
-const DashboardExploreIndexRoute = DashboardExploreIndexRouteImport.update({
-  id: '/Explore/',
-  path: '/Explore/',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
-const DashboardHomeIndexRoute = DashboardHomeIndexRouteImport.update({
-  id: '/Home/',
-  path: '/Home/',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
-const DashboardMessagesIndexRoute = DashboardMessagesIndexRouteImport.update({
-  id: '/Messages/',
-  path: '/Messages/',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
-const DashboardNotificationsIndexRoute =
-  DashboardNotificationsIndexRouteImport.update({
-    id: '/Notifications/',
-    path: '/Notifications/',
-    getParentRoute: () => DashboardRouteRoute,
-  } as any)
-const DashboardProfileIndexRoute = DashboardProfileIndexRouteImport.update({
-  id: '/Profile/',
-  path: '/Profile/',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
 const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
   id: '/Settings/',
   path: '/Settings/',
@@ -105,11 +74,6 @@ export interface FileRoutesByFullPath {
   '/auth/Login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
-  '/dashboard/Explore/': typeof DashboardExploreIndexRoute
-  '/dashboard/Home/': typeof DashboardHomeIndexRoute
-  '/dashboard/Messages/': typeof DashboardMessagesIndexRoute
-  '/dashboard/Notifications/': typeof DashboardNotificationsIndexRoute
-  '/dashboard/Profile/': typeof DashboardProfileIndexRoute
   '/dashboard/Settings/': typeof DashboardSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -120,11 +84,6 @@ export interface FileRoutesByTo {
   '/auth/Login': typeof AuthLoginIndexRoute
   '/auth/register': typeof AuthRegisterIndexRoute
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
-  '/dashboard/Explore': typeof DashboardExploreIndexRoute
-  '/dashboard/Home': typeof DashboardHomeIndexRoute
-  '/dashboard/Messages': typeof DashboardMessagesIndexRoute
-  '/dashboard/Notifications': typeof DashboardNotificationsIndexRoute
-  '/dashboard/Profile': typeof DashboardProfileIndexRoute
   '/dashboard/Settings': typeof DashboardSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -137,11 +96,6 @@ export interface FileRoutesById {
   '/auth/Login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
-  '/dashboard/Explore/': typeof DashboardExploreIndexRoute
-  '/dashboard/Home/': typeof DashboardHomeIndexRoute
-  '/dashboard/Messages/': typeof DashboardMessagesIndexRoute
-  '/dashboard/Notifications/': typeof DashboardNotificationsIndexRoute
-  '/dashboard/Profile/': typeof DashboardProfileIndexRoute
   '/dashboard/Settings/': typeof DashboardSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -155,11 +109,6 @@ export interface FileRouteTypes {
     | '/auth/Login/'
     | '/auth/register/'
     | '/auth/reset-password/'
-    | '/dashboard/Explore/'
-    | '/dashboard/Home/'
-    | '/dashboard/Messages/'
-    | '/dashboard/Notifications/'
-    | '/dashboard/Profile/'
     | '/dashboard/Settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -170,11 +119,6 @@ export interface FileRouteTypes {
     | '/auth/Login'
     | '/auth/register'
     | '/auth/reset-password'
-    | '/dashboard/Explore'
-    | '/dashboard/Home'
-    | '/dashboard/Messages'
-    | '/dashboard/Notifications'
-    | '/dashboard/Profile'
     | '/dashboard/Settings'
   id:
     | '__root__'
@@ -186,11 +130,6 @@ export interface FileRouteTypes {
     | '/auth/Login/'
     | '/auth/register/'
     | '/auth/reset-password/'
-    | '/dashboard/Explore/'
-    | '/dashboard/Home/'
-    | '/dashboard/Messages/'
-    | '/dashboard/Notifications/'
-    | '/dashboard/Profile/'
     | '/dashboard/Settings/'
   fileRoutesById: FileRoutesById
 }
@@ -251,41 +190,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthResetPasswordIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/dashboard/Explore/': {
-      id: '/dashboard/Explore/'
-      path: '/Explore'
-      fullPath: '/dashboard/Explore/'
-      preLoaderRoute: typeof DashboardExploreIndexRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
-    '/dashboard/Home/': {
-      id: '/dashboard/Home/'
-      path: '/Home'
-      fullPath: '/dashboard/Home/'
-      preLoaderRoute: typeof DashboardHomeIndexRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
-    '/dashboard/Messages/': {
-      id: '/dashboard/Messages/'
-      path: '/Messages'
-      fullPath: '/dashboard/Messages/'
-      preLoaderRoute: typeof DashboardMessagesIndexRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
-    '/dashboard/Notifications/': {
-      id: '/dashboard/Notifications/'
-      path: '/Notifications'
-      fullPath: '/dashboard/Notifications/'
-      preLoaderRoute: typeof DashboardNotificationsIndexRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
-    '/dashboard/Profile/': {
-      id: '/dashboard/Profile/'
-      path: '/Profile'
-      fullPath: '/dashboard/Profile/'
-      preLoaderRoute: typeof DashboardProfileIndexRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
     '/dashboard/Settings/': {
       id: '/dashboard/Settings/'
       path: '/Settings'
@@ -322,22 +226,12 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 interface DashboardRouteRouteChildren {
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardBuildSessionIdRoute: typeof DashboardBuildSessionIdRoute
-  DashboardExploreIndexRoute: typeof DashboardExploreIndexRoute
-  DashboardHomeIndexRoute: typeof DashboardHomeIndexRoute
-  DashboardMessagesIndexRoute: typeof DashboardMessagesIndexRoute
-  DashboardNotificationsIndexRoute: typeof DashboardNotificationsIndexRoute
-  DashboardProfileIndexRoute: typeof DashboardProfileIndexRoute
   DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardBuildSessionIdRoute: DashboardBuildSessionIdRoute,
-  DashboardExploreIndexRoute: DashboardExploreIndexRoute,
-  DashboardHomeIndexRoute: DashboardHomeIndexRoute,
-  DashboardMessagesIndexRoute: DashboardMessagesIndexRoute,
-  DashboardNotificationsIndexRoute: DashboardNotificationsIndexRoute,
-  DashboardProfileIndexRoute: DashboardProfileIndexRoute,
   DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
 }
 

@@ -13,12 +13,14 @@ export interface StreamPromptArgs {
 export async function streamPrompt(
   { prompt, sessionId }: StreamPromptArgs,
   onEvent: (event: AgentEvent) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`${BACKEND_URL}/api/v1/agent/prompt`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ prompt, sessionId }),
+    signal,
   });
 
   if (!res.ok || !res.body) {

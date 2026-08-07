@@ -85,12 +85,6 @@ function BuildWorkspace() {
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
   const [isDownloadingZip, setIsDownloadingZip] = React.useState(false);
   const resolvedTheme = useResolvedTheme();
-
-  // Tracks whether the *current* real sessionId is one we just self-assigned
-  // (this same mount created it and replaced the URL) vs. one the user
-  // navigated to some other way (sidebar, direct link). Only the latter
-  // should reset local chat state — a self-assignment is a continuation of
-  // the exact same live conversation, just with its permanent id attached.
   const [selfAssignedId, setSelfAssignedId] = React.useState<string | null>(
     null,
   );
@@ -116,7 +110,11 @@ function BuildWorkspace() {
     enableHistoryQueries,
   );
 
-  const historySeed = useHistorySeed(runsQuery.data, toolInvocationsQuery.data);
+  const historySeed = useHistorySeed(
+    sessionId,
+    runsQuery.data,
+    toolInvocationsQuery.data,
+  );
 
   React.useEffect(() => {
     if (historySeed.status !== "seeded") return;
@@ -139,9 +137,6 @@ function BuildWorkspace() {
     setIsGenerating,
   );
 
-  // Layers "this was the first prompt of a brand-new session" concerns
-  // (URL replace, sidebar refresh) on top of the shared event handler —
-  // every other event still goes straight through unchanged.
   const handleAgentEvent = React.useCallback(
     (event: AgentEvent) => {
       if (event.type === "sandbox_ready" && isNew) {
@@ -383,10 +378,17 @@ function BuildWorkspace() {
               variant="ghost"
               size="icon-xs"
               className=" "
-              disabled={sandbox.isFetching}
-              onClick={() => sandbox.refetch()}
+              disabled={sandbox.isFetching || filesQuery.isFetching}
+              onClick={() => {
+                sandbox.refetch();
+                filesQuery.refetch();
+              }}
             >
-              <RefreshCwIcon />
+              {sandbox.isFetching || filesQuery.isFetching ? (
+                <Spinner className="size-3.5" />
+              ) : (
+                <RefreshCwIcon />
+              )}
             </Button>
 
             <Separator orientation="vertical" />

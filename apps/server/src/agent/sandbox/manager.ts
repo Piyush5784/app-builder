@@ -36,6 +36,8 @@ export interface SandboxHandle {
   isNew: boolean;
 }
 
+// DB writes: AgentSession — updateAgentSession (lastActiveAt) on the warm
+// path, or upsertAgentSession (create/refresh) once a new sandbox is up.
 export async function getOrCreateSandbox(
   sessionId: string,
   allowCreate: boolean,
@@ -83,6 +85,7 @@ export function getPreviewUrl(sandbox: Sandbox): string {
   return `https://${sandbox.getHost(E2B_DEV_PORT)}`;
 }
 
+// DB writes: AgentSession — updateAgentSession (lastActiveAt).
 export async function updateSession(sessionId: string): Promise<void> {
   const session = sandboxSessions[sessionId];
   if (session) session.lastActiveAt = Date.now();
@@ -108,6 +111,9 @@ export async function destroySandbox(sessionId: string): Promise<void> {
  * Gets or creates the session's sandbox and, if it's a fresh one, replays
  * its recorded events onto it. Shared by the agent loop and the plain
  * sandbox-reopen / file-browsing routes — no LLM call happens here.
+ *
+ * DB writes: AgentSession, via getOrCreateSandbox (see its own comment).
+ * getEvents only reads ToolInvocation here, never writes.
  */
 export async function openSandbox(
   sessionId: string,

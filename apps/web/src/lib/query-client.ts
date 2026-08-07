@@ -10,7 +10,6 @@ function extractErrorMessage(error: unknown): string {
   return "Something went wrong";
 }
 
-// Query Client with UI notification logging
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -90,31 +90,6 @@ const options = {
         required: false,
         input: true,
       },
-      isPrivate: {
-        type: "boolean",
-        required: false,
-        defaultValue: false,
-        input: true,
-        fieldName: "isPrivate", // matches your @map("is_private") column
-      },
-      followersCount: {
-        type: "number",
-        required: false,
-        defaultValue: 0,
-        input: false, // never settable directly by the client
-      },
-      followingCount: {
-        type: "number",
-        required: false,
-        defaultValue: 0,
-        input: false,
-      },
-      postsCount: {
-        type: "number",
-        required: false,
-        defaultValue: 0,
-        input: false,
-      },
     },
   },
 
@@ -141,10 +116,6 @@ export const auth = betterAuth({
           image: user.image,
           username: user.username,
           bio: user.bio,
-          isPrivate: user.isPrivate,
-          followersCount: user.followersCount,
-          followingCount: user.followingCount,
-          postsCount: user.postsCount,
         },
       };
     }, options),
