@@ -2,6 +2,7 @@ import { Router } from "express";
 import { agent } from "@/agent";
 import { asyncHandler } from "@/middleware/error-handler";
 import { createSuccessResponse } from "@/types/api-response";
+import { normalLimiter } from "@/middleware/rate-limit";
 
 const modelsRouter = Router();
 
@@ -9,6 +10,7 @@ const modelsRouter = Router();
 // they're secret, just no reason to expose more than the picker needs.
 modelsRouter.get(
   "/models",
+  normalLimiter,
   asyncHandler(async (_req, res) => {
     const models = agent.models.MODEL_REGISTRY.map(({ id, label }) => ({
       id,
