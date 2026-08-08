@@ -137,7 +137,10 @@ async function runLoop(
         model: provider.model,
         step,
         prompt: promptSnapshot as never,
-        response: { content: result.content, toolCalls: result.toolCalls } as never,
+        response: {
+          content: result.content,
+          toolCalls: result.toolCalls,
+        } as never,
         tokensIn: result.tokensIn,
         tokensOut: result.tokensOut,
         success: true,
@@ -375,12 +378,22 @@ export async function runAgent(
       emit({ type: "error", message });
 
       await persistence.agentEvents.create({
-        data: { runId, level: "error", message: "agent run failed", metadata: { error: message } as never },
+        data: {
+          runId,
+          level: "error",
+          message: "agent run failed",
+          metadata: { error: message } as never,
+        },
       });
 
       await persistence.agentRuns.update({
         where: { id: runId },
-        data: { reply: "", status: "failed", errorMessage: message, finishedAt: new Date() },
+        data: {
+          reply: "",
+          status: "failed",
+          errorMessage: message,
+          finishedAt: new Date(),
+        },
       });
 
       await sandbox.manager.destroySandbox(sessionId);

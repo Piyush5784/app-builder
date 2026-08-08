@@ -91,7 +91,10 @@ async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<string> {
  * in order, to rebuild the state a dead sandbox had. Used when a session's
  * sandbox died (idle timeout, crash) and a new one was just created.
  */
-async function replayEvents(sandbox: Sandbox, calls: ToolCall[]): Promise<void> {
+async function replayEvents(
+  sandbox: Sandbox,
+  calls: ToolCall[],
+): Promise<void> {
   for (const call of calls) {
     const output = await executeTool(sandbox, call);
     if (output.startsWith("Error")) {

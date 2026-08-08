@@ -16,7 +16,7 @@ export class ApiError extends Error {
 // so route handlers don't each need their own try/catch translating them —
 // see agent.routes.ts, which just lets these propagate to asyncHandler's
 // .catch(next).
-const domainErrorStatus = new Map<Function, number>([
+const domainErrorStatus = new Map<new (...args: never[]) => Error, number>([
   [SessionNotFoundError, 404],
   [InsufficientCreditsError, 402],
 ]);
@@ -44,7 +44,9 @@ export function errorHandler(
   }
 
   if (err instanceof Error) {
-    const status = domainErrorStatus.get(err.constructor);
+    const status = domainErrorStatus.get(
+      err.constructor as new (...args: never[]) => Error,
+    );
     if (status !== undefined) {
       return res.status(status).json(createErrorResponse(err.message));
     }

@@ -6,6 +6,7 @@
     "dev": "bun --watch src/index.ts",
     "test": "NODE_ENV=development bun test",
     "lint": "eslint",
+    "build": "bun build src/index.ts --outdir dist --target bun",
     "format": "prettier --write \"**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },
