@@ -25,25 +25,29 @@ export interface AgentResult {
   previewUrl: string;
 }
 
-// Paid-tier models require a positive balance; free-tier models are never
-// gated on credits.
-async function hasSufficientCredits(
-  userId: string,
-  tier: ModelOption["tier"],
-): Promise<boolean> {
-  if (tier !== "paid") return true;
+/**
+ * WHY:
+ * A cheap, non-atomic pre-check used only to fail fast (skip opening a
+ * sandbox, skip a step's LLM call) before an amount is actually spent. It is
+ * not the enforcement point — every model's real cost is only known after
+ * the call (token-based), so there's no atomic pre-call guard possible; this
+ * balance > 0 check is just the best available signal upfront, same as how
+ * usage-metered APIs (OpenAI, Anthropic) gate on remaining balance/quota
+ * before a call and meter the actual cost afterward.
+ */
+async function hasSufficientCredits(userId: string): Promise<boolean> {
   return (await persistence.credits.getUserCredits(userId)) > 0;
 }
 
 // Core Loop of the Agent: send messages to the LLM, get tool calls, execute them, and repeat until done or cancelled.
 // DB writes per step: LLMCall, then per tool call: ToolInvocation;
 // User.credits + CreditTransaction (persistence.credits.deductCredits) once
-// per successful LLM call. AgentEvent only on the step-limit warning.
+// per successful LLM call, priced from actual token usage. AgentEvent only
+// on the step-limit warning.
 async function runLoop(
   sessionId: string,
   runId: string,
   userId: string,
-  modelOption: ModelOption,
   sandboxHandle: Sandbox,
   provider: LLMProvider,
   tools: ToolSchema[],
@@ -57,14 +61,15 @@ async function runLoop(
   for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
     if (signal.aborted) break;
 
-    // Paid tier can run out of credits partway through a multi-step run,
-    // not just at the start — re-checked every step, not just once.
-    if (!(await hasSufficientCredits(userId, modelOption.tier))) {
+    const step = i + 1;
+
+    // Every model is billed on actual usage, so a run can run out of credits
+    // partway through a multi-step run, not just at the start — re-checked
+    // every step, not just once.
+    if (!(await hasSufficientCredits(userId))) {
       finalReply = finalReply || "Ran out of credits partway through the run.";
       break;
     }
-
-    const step = i + 1;
 
     emit({ type: "step_start", step });
 
@@ -103,30 +108,37 @@ async function runLoop(
 
     let pricingId: string | undefined;
     let cost: number | undefined;
-    if (modelOption.tier === "paid") {
-      const now = new Date();
-      const pricing = await persistence.modelPricing.findFirst({
-        where: {
-          provider: provider.providerLabel,
-          model: provider.model,
-          effectiveFrom: { lte: now },
-          OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }],
-        },
-        orderBy: { effectiveFrom: "desc" },
-        select: {
-          id: true,
-          inputPricePerMillion: true,
-          outputPricePerMillion: true,
-        },
+    const now = new Date();
+    const pricing = await persistence.modelPricing.findFirst({
+      where: {
+        provider: provider.providerLabel,
+        model: provider.model,
+        effectiveFrom: { lte: now },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }],
+      },
+      orderBy: { effectiveFrom: "desc" },
+      select: {
+        id: true,
+        inputPricePerMillion: true,
+        outputPricePerMillion: true,
+      },
+    });
+    if (pricing) {
+      pricingId = pricing.id;
+      cost =
+        ((result.tokensIn ?? 0) / 1_000_000) *
+          Number(pricing.inputPricePerMillion) +
+        ((result.tokensOut ?? 0) / 1_000_000) *
+          Number(pricing.outputPricePerMillion);
+    } else {
+      // Every model is expected to have a pricing row (see
+      // packages/db/prisma/seed-model-pricing.ts) — this means a call went
+      // out unbilled, worth knowing about rather than silently eating the
+      // cost.
+      telemetry.logger.error("agent", "no pricing configured for model", {
+        provider: provider.providerLabel,
+        model: provider.model,
       });
-      if (pricing) {
-        pricingId = pricing.id;
-        cost =
-          ((result.tokensIn ?? 0) / 1_000_000) *
-            Number(pricing.inputPricePerMillion) +
-          ((result.tokensOut ?? 0) / 1_000_000) *
-            Number(pricing.outputPricePerMillion);
-      }
     }
 
     // Each step's LLM call is recorded in the DB.
@@ -150,17 +162,11 @@ async function runLoop(
       },
     });
 
-    const creditsUsed =
-      modelOption.tier === "free"
-        ? models.FREE_MODEL_CREDITS_PER_CALL
-        : cost !== undefined
-          ? cost / models.USD_PER_CREDIT
-          : 0;
-    if (creditsUsed > 0) {
+    if (cost !== undefined && cost > 0) {
       await persistence.credits.deductCredits(
         userId,
         runId,
-        creditsUsed,
+        cost / models.USD_PER_CREDIT,
         `${provider.providerLabel}/${provider.model} — step ${step}`,
       );
     }
@@ -284,7 +290,7 @@ export async function runAgent(
 
   telemetry.logger.model(provider.providerLabel, provider.model);
 
-  if (!(await hasSufficientCredits(userId, modelOption.tier))) {
+  if (!(await hasSufficientCredits(userId))) {
     throw new InsufficientCreditsError();
   }
 
@@ -362,7 +368,6 @@ export async function runAgent(
         sessionId,
         runId,
         userId,
-        modelOption,
         liveSandbox,
         provider,
         toolsModule.schema.tools,

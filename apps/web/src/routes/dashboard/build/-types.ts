@@ -7,7 +7,6 @@ export interface SandboxResponse {
 export interface ModelInfo {
   id: string;
   label: string;
-  tier: "free" | "paid";
 }
 
 export interface FileTreeNode {

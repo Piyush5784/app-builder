@@ -110,12 +110,12 @@ Don't add banners to small files with one obvious section — they add noise, no
 
 Use these consistently so they're `grep`-able (`grep -rn "TODO:" src/`) and IDE-recognized:
 
-| Tag | Use for |
-|---|---|
-| `TODO:` | Planned work, not yet done |
-| `FIXME:` | Known bug or incorrect behavior that needs fixing |
-| `NOTE:` | Non-obvious context a reader needs, not an action item |
-| `HACK:` | Intentional workaround — should be revisited, explain why it exists |
+| Tag        | Use for                                                                                                                       |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `TODO:`    | Planned work, not yet done                                                                                                    |
+| `FIXME:`   | Known bug or incorrect behavior that needs fixing                                                                             |
+| `NOTE:`    | Non-obvious context a reader needs, not an action item                                                                        |
+| `HACK:`    | Intentional workaround — should be revisited, explain why it exists                                                           |
 | `WARNING:` | Something that will break if changed carelessly (wrong order, implicit dependency, a constraint that isn't enforced by types) |
 
 ```typescript
@@ -146,7 +146,7 @@ For anything genuinely non-obvious — caching, retries, rate limits, workaround
 export function getCachedOrgSettings(orgId: string) { ... }
 ```
 
-Use only the sections a given function actually needs — most doc blocks need just one (a `WHY:` or a `WARNING:`), not all four. If the *what* is obvious from the function name and signature, skip the comment entirely; reserve doc blocks for the *why* — a decision, trade-off, or constraint that isn't visible in the code itself.
+Use only the sections a given function actually needs — most doc blocks need just one (a `WHY:` or a `WARNING:`), not all four. If the _what_ is obvious from the function name and signature, skip the comment entirely; reserve doc blocks for the _why_ — a decision, trade-off, or constraint that isn't visible in the code itself.
 
 ---
 

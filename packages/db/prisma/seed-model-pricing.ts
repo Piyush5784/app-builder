@@ -15,6 +15,12 @@ const PRICES: {
   outputPricePerMillion: number;
 }[] = [
   {
+    provider: "nvidia",
+    model: "nvidia/nemotron-3-ultra-550b-a55b",
+    inputPricePerMillion: 0.6,
+    outputPricePerMillion: 1.8,
+  },
+  {
     provider: "gemini",
     model: "gemini-2.0-flash-exp",
     inputPricePerMillion: 0.1,

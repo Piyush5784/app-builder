@@ -91,9 +91,9 @@ const EXAMPLE_PROMPTS = [
 // render.
 const streamdownPlugins = { cjk, code, math, mermaid };
 
-// Paid models show disabled once credits run out — the backend is the real
-// gate (see agent.routes.ts), this is just so the picker doesn't offer an
-// option that would immediately fail.
+// Every model is billed on usage, so all of them show disabled once credits
+// run out — the backend is the real gate (see agent-runtime.ts), this is
+// just so the picker doesn't offer an option that would immediately fail.
 function ModelPicker({
   models,
   value,
@@ -124,13 +124,8 @@ function ModelPicker({
       </SelectTrigger>
       <SelectContent>
         {models.map((model) => (
-          <SelectItem
-            key={model.id}
-            value={model.id}
-            disabled={model.tier === "paid" && credits <= 0}
-          >
+          <SelectItem key={model.id} value={model.id} disabled={credits <= 0}>
             {model.label}
-            {model.tier === "paid" ? " (Paid)" : ""}
           </SelectItem>
         ))}
       </SelectContent>
