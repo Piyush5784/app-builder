@@ -7,6 +7,7 @@ import type {
   ChatItem,
   FileResponse,
   FileTreeNode,
+  ModelInfo,
   SandboxResponse,
 } from "@/routes/dashboard/build/-types";
 import { buildItemsFromRuns } from "@/routes/dashboard/build/-chat-history";
@@ -84,6 +85,19 @@ export function useHistorySeed(
   return result;
 }
 
+export function useModelsQuery() {
+  return useQuery({
+    queryKey: ["agent-models"],
+    queryFn: async () => {
+      const res = await api.get<{ data: { models: ModelInfo[] } }>(
+        "/agent/models",
+      );
+      return res.data.data.models;
+    },
+    staleTime: Infinity, // static registry — no reason to refetch
+  });
+}
+
 export function useFilesQuery(sessionId: string, enabled: boolean) {
   return useQuery({
     queryKey: ["agent-sandbox-files", sessionId],
@@ -145,7 +159,7 @@ export function useSendPrompt(
   }, []);
 
   const mutate = React.useCallback(
-    (prompt: string) => {
+    (prompt: string, model?: string) => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         onEvent({ type: "cancelled" });
@@ -153,7 +167,7 @@ export function useSendPrompt(
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      streamPrompt({ prompt, sessionId }, onEvent, controller.signal)
+      streamPrompt({ prompt, sessionId, model }, onEvent, controller.signal)
         .catch((error: unknown) => {
           if (error instanceof DOMException && error.name === "AbortError") {
             return; // superseded by a newer stream — not a real failure

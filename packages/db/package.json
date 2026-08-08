@@ -10,6 +10,7 @@
   },
   "scripts": {
     "generate": "zen generate --lite -o ./zenstack/generated && prisma generate --schema ./zenstack/generated/prisma/schema.prisma",
+    "seed:pricing": "bun prisma/seed-model-pricing.ts",
     "format": "prettier --write \"**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },

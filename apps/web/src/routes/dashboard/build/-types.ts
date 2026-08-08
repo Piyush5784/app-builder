@@ -4,6 +4,12 @@ export interface SandboxResponse {
   previewUrl: string;
 }
 
+export interface ModelInfo {
+  id: string;
+  label: string;
+  tier: "free" | "paid";
+}
+
 export interface FileTreeNode {
   path: string;
   name: string;

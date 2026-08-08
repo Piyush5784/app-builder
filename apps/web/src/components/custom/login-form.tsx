@@ -14,6 +14,7 @@ import {
 } from "@/components/custom/form";
 import { Button } from "@package/ui/components/button";
 import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
 import {
   Card,
   CardContent,
@@ -134,6 +135,13 @@ export default function LoginForm({
     });
   }
 
+  async function LoginWithGithub() {
+    await signIn.social({
+      provider: "github",
+      callbackURL: `${FRONTEND_URL}/dashboard`,
+    });
+  }
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     mutate(values);
   }
@@ -194,7 +202,7 @@ export default function LoginForm({
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Welcome back</CardTitle>
           <CardDescription>
-            Login with your Google account or Credentials
+            Login with your Google/GitHub account or Credentials
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -210,6 +218,15 @@ export default function LoginForm({
                   >
                     <FcGoogle />
                     Login with Google
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={LoginWithGithub}
+                    type="button"
+                    disabled={isPending}
+                  >
+                    <FaGithub />
+                    Login with GitHub
                   </Button>
                 </Field>
                 <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">

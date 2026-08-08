@@ -24,7 +24,7 @@ model User {
   username   String?  @unique
   bio        String?
 
-  credits Decimal @default(0)
+  credits Decimal @default(50)
 
   sessions           Session[]
   accounts           Account[]

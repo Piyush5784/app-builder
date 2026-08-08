@@ -24,3 +24,4 @@ export {
   listMutatingToolInvocations,
 } from "@/agent/persistence/tool-invocations";
 export type { CreateToolInvocationParams } from "@/agent/persistence/tool-invocations";
+export { getUserCredits, deductCredits } from "@/agent/persistence/credits";

@@ -4,6 +4,7 @@ import { BACKEND_URL } from "@/config";
 export interface StreamPromptArgs {
   prompt: string;
   sessionId?: string;
+  model?: string;
 }
 
 // POSTs to /agent/prompt and reads the response as one long-lived stream of
@@ -11,7 +12,7 @@ export interface StreamPromptArgs {
 // sandbox status, tokens, tool calls, completion — comes back on this one
 // connection, in order, so there's nothing else to subscribe to.
 export async function streamPrompt(
-  { prompt, sessionId }: StreamPromptArgs,
+  { prompt, sessionId, model }: StreamPromptArgs,
   onEvent: (event: AgentEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -19,7 +20,7 @@ export async function streamPrompt(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ prompt, sessionId }),
+    body: JSON.stringify({ prompt, sessionId, model }),
     signal,
   });
 

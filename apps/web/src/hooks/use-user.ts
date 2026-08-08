@@ -20,6 +20,7 @@ type BaseUser = NonNullable<ReturnType<typeof useSession>["data"]>["user"];
 export type SessionUser = BaseUser & {
   username?: string | null;
   bio?: string | null;
+  credits: number;
 };
 
 // =====================

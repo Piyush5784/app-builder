@@ -1,7 +1,12 @@
 import type { Sandbox } from "e2b";
 import { MAX_AGENT_ITERATIONS } from "@/config";
 import { SYSTEM_PROMPT } from "@/agent/core/prompt";
-import { getProvider, type ProviderName } from "@/agent/providers";
+import { getProvider } from "@/agent/providers";
+import {
+  type ModelOption,
+  FREE_MODEL_CREDITS_PER_CALL,
+  USD_PER_CREDIT,
+} from "@/agent/models";
 import {
   updateSession,
   destroySandbox,
@@ -21,10 +26,20 @@ import {
   createLLMCall,
   createAgentEvent,
   createToolInvocation,
+  getUserCredits,
+  deductCredits,
 } from "@/agent/persistence";
+import { getModelPricing } from "@/agent/persistence/model-pricing";
 import { logger } from "@/agent/telemetry";
 import type { ChatMessage, LLMProvider, ToolSchema } from "@/agent/types";
 import type { AgentEvent } from "@package/shared";
+
+export class InsufficientCreditsError extends Error {
+  constructor() {
+    super("Not enough credits to use this model.");
+    this.name = "InsufficientCreditsError";
+  }
+}
 
 export interface AgentResult {
   sessionId: string;
@@ -34,11 +49,14 @@ export interface AgentResult {
 
 // Core Loop of the Agent: send messages to the LLM, get tool calls, execute them, and repeat until done or cancelled.
 // DB writes per step: LLMCall (createLLMCall), then per tool call:
-// ToolInvocation (createToolInvocation). AgentEvent only on the step-limit
-// warning.
+// ToolInvocation (createToolInvocation); User.credits + CreditTransaction
+// (deductCredits) once per successful LLM call. AgentEvent only on the
+// step-limit warning.
 async function runLoop(
   sessionId: string,
   runId: string,
+  userId: string,
+  modelOption: ModelOption,
   sandbox: Sandbox,
   provider: LLMProvider,
   tools: ToolSchema[],
@@ -51,6 +69,13 @@ async function runLoop(
   for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
     // About: if cancel by client happened between ilteration
     if (signal.aborted) break;
+
+    // Paid tier can run out of credits partway through a multi-step run,
+    // not just at the start — re-checked every step, not just once.
+    if (modelOption.tier === "paid" && (await getUserCredits(userId)) <= 0) {
+      finalReply = finalReply || "Ran out of credits partway through the run.";
+      break;
+    }
 
     const step = i + 1;
 
@@ -90,6 +115,21 @@ async function runLoop(
       throw error;
     }
 
+    let pricingId: string | undefined;
+    let cost: number | undefined;
+    if (modelOption.tier === "paid") {
+      const pricing = await getModelPricing(
+        provider.providerLabel,
+        provider.model,
+      );
+      if (pricing) {
+        pricingId = pricing.id;
+        cost =
+          ((result.tokensIn ?? 0) / 1_000_000) * pricing.inputPricePerMillion +
+          ((result.tokensOut ?? 0) / 1_000_000) * pricing.outputPricePerMillion;
+      }
+    }
+
     // Each Step LLM call is recorded in the DB
     const llmCallId = await createLLMCall({
       runId,
@@ -102,7 +142,24 @@ async function runLoop(
       tokensOut: result.tokensOut,
       success: true,
       latencyMs: Date.now() - callStartedAt,
+      pricingId,
+      cost,
     });
+
+    const creditsUsed =
+      modelOption.tier === "free"
+        ? FREE_MODEL_CREDITS_PER_CALL
+        : cost !== undefined
+          ? cost / USD_PER_CREDIT
+          : 0;
+    if (creditsUsed > 0) {
+      await deductCredits(
+        userId,
+        runId,
+        creditsUsed,
+        `${provider.providerLabel}/${provider.model} — step ${step}`,
+      );
+    }
 
     if (result.toolCalls.length === 0) {
       finalReply = result.content ?? "";
@@ -200,15 +257,20 @@ async function runLoop(
 export async function runAgent(
   sessionId: string,
   userPrompt: string,
-  providerName: ProviderName | undefined,
+  modelOption: ModelOption,
   emit: (event: AgentEvent) => void,
   isNewSession: boolean,
   userId: string,
 ): Promise<AgentResult> {
-  const provider = getProvider(providerName);
+  const provider = getProvider(modelOption.provider);
 
   // Logger: Only for Server Logs
   logger.model(provider.providerLabel, provider.model);
+
+  if (modelOption.tier === "paid" && (await getUserCredits(userId)) <= 0) {
+    throw new InsufficientCreditsError();
+  }
+
   let watcher: RunWatcher | undefined;
 
   try {
@@ -271,6 +333,8 @@ export async function runAgent(
       reply = await runLoop(
         sessionId,
         runId,
+        userId,
+        modelOption,
         sandbox,
         provider,
         tools,

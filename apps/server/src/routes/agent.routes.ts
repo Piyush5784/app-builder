@@ -6,7 +6,8 @@ import {
   listSandboxFiles,
   readSandboxFile,
   downloadSandboxZip,
-  type ProviderName,
+  getModelOption,
+  MODEL_REGISTRY,
 } from "@/agent";
 import { destroySandbox, SessionNotFoundError } from "@/agent/sandbox";
 import { logger } from "@/agent/telemetry";
@@ -50,6 +51,20 @@ async function requireOwnedSession(
     throw new ApiError(404, `Session ${sessionId} does not exist`);
   }
 }
+
+// Only id/label/tier — provider/model strings stay server-internal, not
+// that they're secret, just no reason to expose more than the picker needs.
+agentRouter.get(
+  "/models",
+  asyncHandler(async (_req, res) => {
+    const models = MODEL_REGISTRY.map(({ id, label, tier }) => ({
+      id,
+      label,
+      tier,
+    }));
+    res.status(200).json(createSuccessResponse({ models }));
+  }),
+);
 
 agentRouter.delete(
   "/sessions/:sessionId",
@@ -193,10 +208,16 @@ agentRouter.post(
   asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw new ApiError(401, "Unauthorized");
     const userId = req.user.id;
-    const { prompt, sessionId, provider } = req.body;
+    const { prompt, sessionId, model } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
       throw new ApiError(400, "Invalid prompt");
+    }
+
+    const modelOption =
+      model === undefined ? MODEL_REGISTRY[0] : getModelOption(model);
+    if (!modelOption) {
+      throw new ApiError(400, "Invalid model");
     }
 
     const isNewSession = !(sessionId && typeof sessionId === "string");
@@ -205,14 +226,6 @@ agentRouter.post(
     if (!isNewSession) {
       await requireOwnedSession(sId, userId);
     }
-
-    const providerName: ProviderName | undefined =
-      provider === "gemini" ||
-      provider === "openrouter" ||
-      provider === "ollama" ||
-      provider === "nvidia"
-        ? provider
-        : "nvidia"; // default provider
 
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -225,7 +238,7 @@ agentRouter.post(
     };
 
     try {
-      await runAgent(sId, prompt, providerName, emit, isNewSession, userId);
+      await runAgent(sId, prompt, modelOption, emit, isNewSession, userId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error("agent", "prompt stream ended in error", {

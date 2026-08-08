@@ -18,6 +18,13 @@ import {
   DropdownMenuItem,
 } from "@package/ui/components/dropdown-menu";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@package/ui/components/select";
+import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
@@ -32,6 +39,11 @@ import {
 } from "@package/ui/components/message-scroller";
 import { Message, MessageContent } from "@package/ui/components/message";
 import { Bubble, BubbleContent } from "@package/ui/components/bubble";
+import { Streamdown } from "streamdown";
+import { cjk } from "@streamdown/cjk";
+import { code } from "@streamdown/code";
+import { math } from "@streamdown/math";
+import { mermaid } from "@streamdown/mermaid";
 import {
   ArrowUpIcon,
   ExternalLinkIcon,
@@ -48,10 +60,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { AgentEvent } from "@package/shared";
-import type { ChatItem } from "@/routes/dashboard/build/-types";
+import type { ChatItem, ModelInfo } from "@/routes/dashboard/build/-types";
 import { downloadFile, downloadZip } from "@/routes/dashboard/build/-download";
 import { invalidateQueriesForTable } from "@/utils/query-cache";
 import { WebglMorph } from "@/components/custom/webgl-morph/webgl-morph";
+import { useUser } from "@/hooks/use-user";
 import {
   useRunsQuery,
   useToolInvocationsQuery,
@@ -63,6 +76,7 @@ import {
   useCancelGeneration,
   useCancelOnEscape,
   useAgentEventHandler,
+  useModelsQuery,
 } from "@/routes/dashboard/build/-hooks";
 import { ActivityRow } from "@/routes/dashboard/build/-activity-row";
 import { toTreeData, getLanguage } from "@/routes/dashboard/build/-file-tree";
@@ -72,6 +86,57 @@ const EXAMPLE_PROMPTS = [
   "A pricing page with three tiers and a toggle for monthly/yearly",
   "A dashboard with a sidebar and a table of recent orders",
 ];
+
+// Stable reference so Streamdown doesn't see a new plugins object every
+// render.
+const streamdownPlugins = { cjk, code, math, mermaid };
+
+// Paid models show disabled once credits run out — the backend is the real
+// gate (see agent.routes.ts), this is just so the picker doesn't offer an
+// option that would immediately fail.
+function ModelPicker({
+  models,
+  value,
+  onChange,
+  credits,
+  disabled,
+}: {
+  models: ModelInfo[];
+  value: string;
+  onChange: (id: string) => void;
+  credits: number;
+  disabled?: boolean;
+}) {
+  return (
+    <Select
+      value={value}
+      onValueChange={(next) => {
+        if (next) onChange(next);
+      }}
+      disabled={disabled}
+    >
+      <SelectTrigger size="sm" className="w-auto">
+        <SelectValue placeholder="Model">
+          {(id: string | null) =>
+            models.find((model) => model.id === id)?.label ?? "Model"
+          }
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {models.map((model) => (
+          <SelectItem
+            key={model.id}
+            value={model.id}
+            disabled={model.tier === "paid" && credits <= 0}
+          >
+            {model.label}
+            {model.tier === "paid" ? " (Paid)" : ""}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 function BuildWorkspace() {
   const { sessionId } = useParams({ from: "/dashboard/build/$sessionId" });
@@ -84,7 +149,11 @@ function BuildWorkspace() {
   const [view, setView] = React.useState<"preview" | "code">("preview");
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
   const [isDownloadingZip, setIsDownloadingZip] = React.useState(false);
+  const [selectedModelId, setSelectedModelId] = React.useState("nvidia");
   const resolvedTheme = useResolvedTheme();
+  const modelsQuery = useModelsQuery();
+  const { data: userData } = useUser();
+  const credits = userData?.user.credits ?? 0;
   const [selfAssignedId, setSelfAssignedId] = React.useState<string | null>(
     null,
   );
@@ -172,7 +241,7 @@ function BuildWorkspace() {
     ]);
     setPrompt("");
     setIsGenerating(true);
-    sendPrompt.mutate(value);
+    sendPrompt.mutate(value, selectedModelId);
   };
 
   const handleDownloadZip = async () => {
@@ -220,8 +289,19 @@ function BuildWorkspace() {
                   handleSend();
                 }
               }}
-              className="min-h-28 resize-none pr-12 text-white !bg-black"
+              className="min-h-28 resize-none pb-11 pr-12 text-white bg-black!"
             />
+            {modelsQuery.data && (
+              <div className="absolute bottom-2.5 left-2.5">
+                <ModelPicker
+                  models={modelsQuery.data}
+                  value={selectedModelId}
+                  onChange={setSelectedModelId}
+                  credits={credits}
+                  disabled={isGenerating}
+                />
+              </div>
+            )}
             <Button
               size="icon-sm"
               className="absolute bottom-2.5 right-2.5"
@@ -284,7 +364,18 @@ function BuildWorkspace() {
                                   : "muted"
                             }
                           >
-                            <BubbleContent>{item.content}</BubbleContent>
+                            <BubbleContent>
+                              {item.kind === "assistant" ? (
+                                <Streamdown
+                                  mode="static"
+                                  plugins={streamdownPlugins}
+                                >
+                                  {item.content}
+                                </Streamdown>
+                              ) : (
+                                item.content
+                              )}
+                            </BubbleContent>
                           </Bubble>
                         </MessageContent>
                       </Message>
@@ -320,8 +411,19 @@ function BuildWorkspace() {
                   cancelGeneration.mutate();
                 }
               }}
-              className="min-h-20 resize-none pr-12 text-sm"
+              className="min-h-20 resize-none pb-9 pr-12 text-sm"
             />
+            {modelsQuery.data && (
+              <div className="absolute bottom-2 left-2">
+                <ModelPicker
+                  models={modelsQuery.data}
+                  value={selectedModelId}
+                  onChange={setSelectedModelId}
+                  credits={credits}
+                  disabled={isGenerating}
+                />
+              </div>
+            )}
             {isGenerating ? (
               <Button
                 size="icon-sm"

@@ -12,6 +12,8 @@ export interface CreateLLMCallParams {
   success: boolean;
   errorMessage?: string;
   latencyMs: number;
+  pricingId?: string;
+  cost?: number;
 }
 
 // `prompt`/`response` land in Json columns — Prisma's InputJsonValue type
@@ -33,6 +35,8 @@ export async function createLLMCall(
       success: params.success,
       errorMessage: params.errorMessage,
       latencyMs: params.latencyMs,
+      pricingId: params.pricingId,
+      cost: params.cost,
     },
   });
   return call.id;
