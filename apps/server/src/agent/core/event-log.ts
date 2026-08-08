@@ -1,26 +1,25 @@
-import type { ToolCall, ToolName } from "@/agent/types";
-import { createSandboxEvent, listSandboxEvents } from "@/agent/persistence";
+import type { ToolCall } from "@/agent/types";
+import { MUTATING_TOOLS } from "@package/shared";
+import { persistence } from "@/agent/persistence";
 
-// Only these mutate sandbox state — readFile/listFiles are pure reads and
-// never need replaying.
-const MUTATING_TOOLS = new Set<ToolName>([
-  "writeFile",
-  "editFile",
-  "deleteFile",
-  "runCommand",
-]);
-
-export function isMutatingTool(name: ToolName): boolean {
-  return MUTATING_TOOLS.has(name);
+async function getEvents(sessionId: string): Promise<ToolCall[]> {
+  const rows = await persistence.toolInvocations.findMany({
+    where: {
+      sessionId,
+      status: "success",
+      toolName: { in: [...MUTATING_TOOLS] },
+    },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, toolName: true, arguments: true },
+  });
+  return rows.map(
+    (row) =>
+      ({
+        id: row.id,
+        name: row.toolName,
+        arguments: row.arguments,
+      }) as unknown as ToolCall,
+  );
 }
 
-export async function recordEvent(
-  sessionId: string,
-  call: ToolCall,
-): Promise<void> {
-  await createSandboxEvent(sessionId, call);
-}
-
-export async function getEvents(sessionId: string): Promise<ToolCall[]> {
-  return listSandboxEvents(sessionId);
-}
+export const eventLog = { getEvents };

@@ -1,12 +1,13 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AgentEvent } from "@package/shared";
+import { isMutatingTool, type AgentEvent } from "@package/shared";
 import { api } from "@/utils/axios";
 import { useModelQuery } from "@/hooks/use-model-queries";
 import type {
   ChatItem,
   FileResponse,
   FileTreeNode,
+  ModelInfo,
   SandboxResponse,
 } from "@/routes/dashboard/build/-types";
 import { buildItemsFromRuns } from "@/routes/dashboard/build/-chat-history";
@@ -52,21 +53,25 @@ export type HistorySeedResult =
   | { status: "empty" }
   | { status: "seeded"; items: ChatItem[]; isGenerating: boolean };
 
+// Seeds at most once *per session*, not once ever — this route keeps the
+// same component mounted across session switches, so a plain "ran already"
+// ref would permanently block re-seeding after the first session.
 export function useHistorySeed(
+  sessionId: string,
   runs: ReturnType<typeof useRunsQuery>["data"],
   invocations: ReturnType<typeof useToolInvocationsQuery>["data"],
 ): HistorySeedResult {
-  const hasSeededRef = React.useRef(false);
+  const seededForRef = React.useRef<string | null>(null);
   const [result, setResult] = React.useState<HistorySeedResult>({
     status: "pending",
   });
 
   React.useEffect(() => {
-    if (hasSeededRef.current || !runs || !invocations) return;
-    hasSeededRef.current = true;
+    if (seededForRef.current === sessionId || !runs || !invocations) return;
+    seededForRef.current = sessionId;
 
     if (runs.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate: hasSeededRef guards this to run at most once, not a render-time derivation
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate: seededForRef guards this to run at most once per session, not a render-time derivation
       setResult({ status: "empty" });
       return;
     }
@@ -75,9 +80,22 @@ export function useHistorySeed(
       items: buildItemsFromRuns(runs, invocations),
       isGenerating: runs.some((run) => run.status === "running"),
     });
-  }, [runs, invocations]);
+  }, [sessionId, runs, invocations]);
 
   return result;
+}
+
+export function useModelsQuery() {
+  return useQuery({
+    queryKey: ["agent-models"],
+    queryFn: async () => {
+      const res = await api.get<{ data: { models: ModelInfo[] } }>(
+        "/agent/models",
+      );
+      return res.data.data.models;
+    },
+    staleTime: Infinity, // static registry — no reason to refetch
+  });
 }
 
 export function useFilesQuery(sessionId: string, enabled: boolean) {
@@ -127,14 +145,49 @@ export function useSandboxQuery(sessionId: string, enabled = true) {
 // Sends the prompt and reads the whole run's events off that one request.
 // `sessionId` is optional — a brand-new session doesn't have one yet, the
 // server generates it and reports it back on "sandbox_ready".
+//
+// Plain fetch, no useMutation/QueryClient — a request/response mutation
+// abstraction doesn't fit a long-lived SSE stream well here.
 export function useSendPrompt(
   sessionId: string | undefined,
   onEvent: (event: AgentEvent) => void,
 ) {
-  return useMutation({
-    mutationFn: (prompt: string) =>
-      streamPrompt({ prompt, sessionId }, onEvent),
-  });
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  React.useEffect(() => {
+    return () => abortControllerRef.current?.abort();
+  }, []);
+
+  const mutate = React.useCallback(
+    (prompt: string, model?: string) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        onEvent({ type: "cancelled" });
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      streamPrompt({ prompt, sessionId, model }, onEvent, controller.signal)
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return; // superseded by a newer stream — not a real failure
+          }
+          onEvent({
+            type: "error",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        })
+        .finally(() => {
+          // Only clear if nothing newer has already taken over this ref.
+          if (abortControllerRef.current === controller) {
+            abortControllerRef.current = null;
+          }
+        });
+    },
+    [sessionId, onEvent],
+  );
+
+  return { mutate };
 }
 
 export function useCancelGeneration(sessionId: string) {
@@ -161,9 +214,6 @@ export function useCancelOnEscape(
   }, [isGenerating, onCancel]);
 }
 
-// Translates the prompt stream's AgentEvent sequence into `items`/
-// `isGenerating` updates. Tokens accumulate into one "live" assistant
-// bubble that "done" then overwrites with the authoritative final text.
 export function useAgentEventHandler(
   sessionId: string,
   setItems: React.Dispatch<React.SetStateAction<ChatItem[]>>,
@@ -185,18 +235,19 @@ export function useAgentEventHandler(
           break; // no UI effect — just marks loop progress
         }
         case "token": {
-          setItems((prev) => {
-            if (streamingIdRef.current) {
-              return prev.map((item) =>
-                item.id === streamingIdRef.current && item.kind === "assistant"
-                  ? { ...item, content: item.content + event.delta }
-                  : item,
-              );
-            }
-            const id = crypto.randomUUID();
-            streamingIdRef.current = id;
-            return [...prev, { id, kind: "assistant", content: event.delta }];
-          });
+          const isNewMessage = !streamingIdRef.current;
+          if (isNewMessage) streamingIdRef.current = crypto.randomUUID();
+          const id = streamingIdRef.current!; // just set above if it was null
+
+          setItems((prev) =>
+            isNewMessage
+              ? [...prev, { id, kind: "assistant", content: event.delta }]
+              : prev.map((item) =>
+                  item.id === id && item.kind === "assistant"
+                    ? { ...item, content: item.content + event.delta }
+                    : item,
+                ),
+          );
           break;
         }
         case "tool_start": {
@@ -239,6 +290,11 @@ export function useAgentEventHandler(
             }
             return next;
           });
+          if (event.success && isMutatingTool(event.tool)) {
+            queryClient.invalidateQueries({
+              queryKey: ["agent-sandbox-files", sessionId],
+            });
+          }
           break;
         }
         case "done": {

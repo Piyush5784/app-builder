@@ -14,6 +14,7 @@ export const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 
 // --- AI agent: provider + models ---
 export const PROVIDER = process.env.PROVIDER ?? "openrouter";
+
 export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 export const OPENROUTER_MODEL =
   process.env.OPENROUTER_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b:free";
@@ -25,6 +26,15 @@ export const NVIDIA_MODEL =
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen3:8b";
 export const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1/chat/completions";
+export const GROQ_API_KEY = process.env.GROQ_API_KEY!;
+export const GROQ_MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+
+// --- AI agent: paid models (require user credits, see agent/models.ts) ---
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
+export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
+export const ANTHROPIC_MODEL =
+  process.env.ANTHROPIC_MODEL ?? "claude-3-5-sonnet-20241022";
 
 // --- AI agent: sandbox (E2B) ---
 export const E2B_API_KEY = process.env.E2B_API_KEY!;

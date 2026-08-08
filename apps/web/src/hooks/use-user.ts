@@ -20,10 +20,7 @@ type BaseUser = NonNullable<ReturnType<typeof useSession>["data"]>["user"];
 export type SessionUser = BaseUser & {
   username?: string | null;
   bio?: string | null;
-  isPrivate: boolean;
-  followersCount: number;
-  followingCount: number;
-  postsCount: number;
+  credits: number;
 };
 
 // =====================
@@ -99,7 +96,7 @@ export function useRegister() {
       });
 
       navigate({
-        to: "/auth/Login",
+        to: "/auth/login",
       });
     },
 
@@ -189,7 +186,7 @@ export function useResetPassword() {
 
     onSuccess: () => {
       toast.success("Password reset — you can now log in");
-      navigate({ to: "/auth/Login" });
+      navigate({ to: "/auth/login" });
     },
 
     onError: (error) => {
@@ -271,7 +268,7 @@ export function useUser() {
   useEffect(() => {
     if (!isPending && !data?.user) {
       // navigate({
-      //   to: "/auth/Login",
+      //   to: "/auth/login",
       // });
     }
   }, [isPending, data?.user, navigate]);

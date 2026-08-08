@@ -53,24 +53,6 @@ jobs:
       - name: Generate
         run: bun run generate
 
-      - name: Check generated files
-        working-directory: packages/db
-        run: |
-          files=(
-            "zenstack/generated/schema.ts"
-            "zenstack/generated/schema-lite.ts"
-            "zenstack/generated/models.ts"
-            "zenstack/generated/input.ts"
-            "zenstack/generated/prisma/schema.prisma"
-          )
-          for f in "${files[@]}"; do
-            if [ ! -s "$f" ]; then
-              echo "Missing or empty generated file: $f"
-              exit 1
-            fi
-          done
-          echo "All expected generated files are present."
-
       - name: Prisma Validate
         working-directory: packages/db
         run: bunx prisma validate

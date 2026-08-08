@@ -27,6 +27,11 @@ const options = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
+    github: {
+      enabled: true,
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    },
   },
 
   // Email + password login/registration
@@ -90,31 +95,6 @@ const options = {
         required: false,
         input: true,
       },
-      isPrivate: {
-        type: "boolean",
-        required: false,
-        defaultValue: false,
-        input: true,
-        fieldName: "isPrivate", // matches your @map("is_private") column
-      },
-      followersCount: {
-        type: "number",
-        required: false,
-        defaultValue: 0,
-        input: false, // never settable directly by the client
-      },
-      followingCount: {
-        type: "number",
-        required: false,
-        defaultValue: 0,
-        input: false,
-      },
-      postsCount: {
-        type: "number",
-        required: false,
-        defaultValue: 0,
-        input: false,
-      },
     },
   },
 
@@ -131,6 +111,15 @@ export const auth = betterAuth({
     // user.bio, etc. properly typed inside this callback instead of falling
     // back to the base User type
     customSession(async ({ user, session }) => {
+      // Fetched separately, not via additionalFields — `credits` is a
+      // Prisma Decimal, and better-auth's internal adapter structuredClone()s
+      // the raw user row for fields it manages itself, which throws on a
+      // Decimal instance. Converting to a plain number here avoids that.
+      const row = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { credits: true },
+      });
+
       return {
         session,
         user: {
@@ -141,10 +130,7 @@ export const auth = betterAuth({
           image: user.image,
           username: user.username,
           bio: user.bio,
-          isPrivate: user.isPrivate,
-          followersCount: user.followersCount,
-          followingCount: user.followingCount,
-          postsCount: user.postsCount,
+          credits: row ? Number(row.credits) : 0,
         },
       };
     }, options),

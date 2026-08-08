@@ -38,7 +38,7 @@ export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
     const { data } = await authClient.getSession();
     if (!data?.user) {
-      throw redirect({ to: "/auth/Login" });
+      throw redirect({ to: "/auth/login" });
     }
   },
   component: DashboardLayout,

@@ -4,6 +4,11 @@ export interface SandboxResponse {
   previewUrl: string;
 }
 
+export interface ModelInfo {
+  id: string;
+  label: string;
+}
+
 export interface FileTreeNode {
   path: string;
   name: string;

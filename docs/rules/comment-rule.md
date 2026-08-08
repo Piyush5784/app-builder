@@ -76,7 +76,26 @@ function mergePreferences(user, defaults) { ... }
 const emailRegex = /^[^\s@]+(?<!\.\.)@[^\s@]+\.[^\s@]+$/;
 ```
 
-### 5. TODOs — with context and an owner/ticket
+### 5. Section banners — breaking up large files
+
+**What it does:** Marks the boundary between unrelated groups of exports in a file with several of them.
+**Why it needs a comment:** In files with many exported functions (most useful in `middleware/`, `routes/`, and similar), a banner lets a reader jump to the right section by scanning, without reading every function signature first.
+
+```typescript
+// ============================================
+// Authentication Middleware
+// ============================================
+export function authMiddleware() { ... }
+
+// ============================================
+// Rate Limiting
+// ============================================
+export function rateLimitMiddleware() { ... }
+```
+
+Don't add banners to small files with one obvious section — they add noise, not navigation.
+
+### 6. TODOs — with context and an owner/ticket
 
 **What it does:** Marks a temporary fallback as something to be removed later.
 **Why it needs a comment:** Without an owner and ticket reference, TODOs get ignored indefinitely — the comment turns a vague intention into something trackable.
@@ -84,6 +103,50 @@ const emailRegex = /^[^\s@]+(?<!\.\.)@[^\s@]+\.[^\s@]+$/;
 ```javascript
 // TODO(piyush): Remove this fallback once all clients are on API v2 (JIRA-482)
 ```
+
+---
+
+## Tag Vocabulary
+
+Use these consistently so they're `grep`-able (`grep -rn "TODO:" src/`) and IDE-recognized:
+
+| Tag        | Use for                                                                                                                       |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `TODO:`    | Planned work, not yet done                                                                                                    |
+| `FIXME:`   | Known bug or incorrect behavior that needs fixing                                                                             |
+| `NOTE:`    | Non-obvious context a reader needs, not an action item                                                                        |
+| `HACK:`    | Intentional workaround — should be revisited, explain why it exists                                                           |
+| `WARNING:` | Something that will break if changed carelessly (wrong order, implicit dependency, a constraint that isn't enforced by types) |
+
+```typescript
+// FIXME: this silently swallows Prisma unique-constraint errors
+// HACK: E2B sandbox doesn't expose a native cancel signal, so we poll
+// WARNING: this must run before express.json() — better-auth needs the raw body
+```
+
+## Function-Level Doc Blocks
+
+For anything genuinely non-obvious — caching, retries, rate limits, workarounds — a single doc comment often needs to carry more than one kind of context at once. Rather than stacking separate one-line comments, use labeled sections inside one doc block:
+
+```typescript
+/**
+ * WHY:
+ * We keep a local cache because NeonDB latency is high
+ * for requests from India.
+ *
+ * CONTEXT:
+ * Cache invalidation happens after organization updates.
+ *
+ * WARNING:
+ * Do not increase TTL without checking stale-data impact.
+ *
+ * TODO:
+ * Replace with distributed cache when scaling horizontally.
+ */
+export function getCachedOrgSettings(orgId: string) { ... }
+```
+
+Use only the sections a given function actually needs — most doc blocks need just one (a `WHY:` or a `WARNING:`), not all four. If the _what_ is obvious from the function name and signature, skip the comment entirely; reserve doc blocks for the _why_ — a decision, trade-off, or constraint that isn't visible in the code itself.
 
 ---
 
@@ -119,7 +182,7 @@ if (isEligibleForPurchase) { ... }
   - Docstrings for Python
   - `///` for Rust
   - Godoc-style for Go
-- Keep a consistent tag vocabulary: `TODO`, `FIXME`, `HACK`, `NOTE` — many teams lint for these and track them in CI or issue trackers.
+- Keep a consistent tag vocabulary — see [Tag Vocabulary](#tag-vocabulary) above — many teams lint for these and track them in CI or issue trackers.
 - Place comments on their own line above the code they describe. Avoid trailing same-line comments for anything non-trivial — they get cramped and are easy to miss.
 
 ---

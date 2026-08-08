@@ -5,7 +5,7 @@ import type {
   ToolSchema,
 } from "@/agent/types";
 import { toToolCall } from "@/agent/types";
-import { logger } from "@/agent/telemetry";
+import { telemetry } from "@/agent/telemetry";
 import { extractFallbackToolCalls } from "@/agent/providers/tool-call-recovery";
 
 interface OpenAIUsageWire {
@@ -208,7 +208,7 @@ async function requestOnceStreaming(
   if (toolCalls.length === 0 && content) {
     const recovered = extractFallbackToolCalls(content);
     if (recovered.length > 0) {
-      logger.error(
+      telemetry.logger.error(
         "provider",
         "model put tool call(s) in content instead of tool_calls, recovered",
         { recoveredCount: recovered.length },
@@ -276,7 +276,7 @@ export function createOpenAICompatProvider(
           // Already streamed partial text to the user for this attempt —
           // retrying now would duplicate or garble what they've already seen.
           if (state.startedEmitting) break;
-          logger.error("provider", "attempt failed", {
+          telemetry.logger.error("provider", "attempt failed", {
             provider: options.providerLabel,
             attempt,
             maxAttempts,

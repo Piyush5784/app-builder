@@ -1,7 +1,6 @@
-// Prisma's own config loader doesn't inherit Bun's automatic .env loading —
-// this needs to stay even though the rest of the codebase doesn't use dotenv.
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import { DATABASE_URL } from "./src/config";
 
 export default defineConfig({
   schema: "zenstack/generated/prisma/schema.prisma",
@@ -10,6 +9,6 @@ export default defineConfig({
     seed: "bun prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: DATABASE_URL,
   },
 });

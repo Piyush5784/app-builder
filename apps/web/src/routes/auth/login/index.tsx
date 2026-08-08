@@ -9,6 +9,6 @@ function Login() {
   );
 }
 
-export const Route = createFileRoute("/auth/Login/")({
+export const Route = createFileRoute("/auth/login/")({
   component: Login,
 });

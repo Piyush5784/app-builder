@@ -36,7 +36,7 @@ import { PasswordInput } from "@/components/custom/password-input";
 import { passwordFormSchema } from "@/lib/validation-schemas";
 import { useChangePassword, useDeleteAccount } from "@/hooks/use-user";
 
-export const Route = createFileRoute("/dashboard/Settings/")({
+export const Route = createFileRoute("/dashboard/settings/")({
   component: RouteComponent,
 });
 

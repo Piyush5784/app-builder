@@ -1,5 +1,5 @@
 import { Router } from "express";
-import agentRouter from "@/routes/agent.routes";
+import agentRouter from "@/routes/agent";
 
 const allRouter = Router();
 

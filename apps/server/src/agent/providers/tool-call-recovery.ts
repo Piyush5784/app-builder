@@ -1,13 +1,5 @@
 import { toToolCall, type ToolCall } from "@/agent/types";
 
-/**
- * Scans a string for top-level {...} JSON objects via brace-depth tracking
- * (string-literal aware, so braces inside quoted values — including JSX like
- * `{logo}` embedded in a file-content string — don't throw off the count).
- * Correctly splits any number of tool-call blobs regardless of whether
- * they're separated by newlines, spaces, or nothing at all — unlike a naive
- * whole-string JSON.parse, which only ever finds the first one.
- */
 export function extractJsonObjects(text: string): string[] {
   const objects: string[] = [];
   let depth = 0;
@@ -42,14 +34,7 @@ export function extractJsonObjects(text: string): string[] {
   return objects;
 }
 
-/**
- * Some models (esp. local/small ones) put the tool call's JSON straight into
- * `content` instead of the real tool_calls field — sometimes wrapped in
- * Qwen-style <tool_call>...</tool_call> tags, sometimes bare like
- * {"name": "listFiles", "arguments": {}}, and sometimes several of either
- * form back to back in one response. Recover every one we can instead of
- * burning a retry on a response that was actually fine.
- */
+// Extracts tool calls from the content, looking for <tool_call>...</tool_call> blocks first, and if none are found, attempts to extract JSON objects from the entire content. Each valid tool call is converted into a ToolCall object with a unique id.
 export function extractFallbackToolCalls(content: string): ToolCall[] {
   const wrapped = [
     ...content.matchAll(/<tool_call>([\s\S]*?)<\/tool_call>/g),

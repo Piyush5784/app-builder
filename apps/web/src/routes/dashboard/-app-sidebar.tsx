@@ -237,7 +237,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <ThemeToggle />
           <SidebarMenuItem>
-            <SidebarMenuButton render={<Link to="/dashboard/Settings" />}>
+            <SidebarMenuButton render={<Link to="/dashboard/settings" />}>
               <Settings />
               <span>Settings</span>
             </SidebarMenuButton>

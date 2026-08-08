@@ -1,15 +1,11 @@
 import { Sandbox } from "e2b";
 import { ZipArchive, type Archiver } from "archiver";
 import { SANDBOX_TIMEOUT_MS, E2B_TEMPLATE_ID } from "@/config";
-import { logger } from "@/agent/telemetry";
-import {
-  getAgentSessionOwnerId,
-  upsertAgentSession,
-  updateAgentSession,
-} from "@/agent/persistence";
-import { replayEvents, resolvePath } from "@/agent/tools";
-import { getEvents } from "@/agent/core/event-log";
-import { buildFileTree, type FileTreeNode } from "@/agent/sandbox/file-tree";
+import { telemetry } from "@/agent/telemetry";
+import { persistence } from "@/agent/persistence";
+import { executer } from "@/agent/tools/executer";
+import { eventLog } from "@/agent/core/event-log";
+import { fileTree, type FileTreeNode } from "@/agent/sandbox/file-tree";
 
 const E2B_DEV_PORT = 5173;
 
@@ -36,17 +32,19 @@ export interface SandboxHandle {
   isNew: boolean;
 }
 
-export async function getOrCreateSandbox(
+// DB writes: AgentSession — updateMany (lastActiveAt) on the warm path, or
+// upsert (create/refresh) once a new sandbox is up.
+async function getOrCreateSandbox(
   sessionId: string,
   allowCreate: boolean,
   userId: string,
 ): Promise<SandboxHandle> {
-  // Checked unconditionally, even before the warm in-memory path below —
-  // otherwise a logged-in user who merely knows/guesses another user's
-  // sessionId could ride their still-warm sandbox with no ownership check
-  // at all. Never distinguish "exists but isn't yours" from "doesn't
-  // exist" in the error, so session ids can't be probed for existence.
-  const ownerId = await getAgentSessionOwnerId(sessionId);
+  const owner = await persistence.agentSessions.findUnique({
+    where: { id: sessionId },
+    select: { userId: true },
+  });
+  const ownerId = owner?.userId ?? null;
+
   if (ownerId !== null && ownerId !== userId) {
     throw new SessionNotFoundError(sessionId);
   }
@@ -58,9 +56,12 @@ export async function getOrCreateSandbox(
 
   if (existingSession && !isExpired(existingSession)) {
     try {
-      await existingSession.sandbox.setTimeout(SANDBOX_TIMEOUT_MS); // extend the 30 min window
+      await existingSession.sandbox.setTimeout(SANDBOX_TIMEOUT_MS);
       existingSession.lastActiveAt = Date.now();
-      await updateAgentSession(sessionId);
+      await persistence.agentSessions.updateMany({
+        where: { id: sessionId },
+        data: { lastActiveAt: new Date() },
+      });
       return { sandbox: existingSession.sandbox, isNew: false };
     } catch {
       // Expected when the old sandbox already died (idle timeout, restart) —
@@ -78,22 +79,58 @@ export async function getOrCreateSandbox(
     lastActiveAt: Date.now(),
   };
 
-  await upsertAgentSession(sessionId, newSandbox.sandboxId, userId);
+  await persistence.agentSessions.upsert({
+    where: { id: sessionId },
+    create: { id: sessionId, sandboxId: newSandbox.sandboxId, userId },
+    update: { sandboxId: newSandbox.sandboxId, lastActiveAt: new Date() },
+  });
 
   return { sandbox: newSandbox, isNew: true };
 }
 
-export function getPreviewUrl(sandbox: Sandbox): string {
+function getPreviewUrl(sandbox: Sandbox): string {
   return `https://${sandbox.getHost(E2B_DEV_PORT)}`;
 }
 
-export async function updateSession(sessionId: string): Promise<void> {
+// DB writes: AgentSession — updateMany (lastActiveAt).
+async function updateSession(sessionId: string): Promise<void> {
   const session = sandboxSessions[sessionId];
   if (session) session.lastActiveAt = Date.now();
-  await updateAgentSession(sessionId);
+  await persistence.agentSessions.updateMany({
+    where: { id: sessionId },
+    data: { lastActiveAt: new Date() },
+  });
 }
 
-export async function destroySandbox(sessionId: string): Promise<void> {
+/**
+ * WHY:
+ * Vite's dev server (started once at sandbox boot) watches the filesystem
+ * for changes, but writes made through E2B's file API don't reliably raise
+ * the inotify events that watcher depends on — so it can keep serving stale
+ * content indefinitely after the agent edits files. A full restart forces it
+ * to re-read everything from disk; Vite's own HMR client then reloads the
+ * preview automatically once it reconnects to the new process.
+ *
+ * CONTEXT:
+ * Killing by port rather than by the tracked start-command pid, since `npm
+ * run dev` spawns Vite as a child process and killing just the npm pid can
+ * leave Vite itself still holding the port.
+ */
+async function restartDevServer(sandbox: Sandbox): Promise<void> {
+  try {
+    await sandbox.commands.run(`fuser -k ${E2B_DEV_PORT}/tcp; sleep 0.3`, {
+      cwd: executer.E2B_APP_DIR,
+    });
+  } catch {
+    // Nothing was listening on the port yet — fine, there's nothing to kill.
+  }
+  await sandbox.commands.run("npm run dev", {
+    cwd: executer.E2B_APP_DIR,
+    background: true,
+  });
+}
+
+async function destroySandbox(sessionId: string): Promise<void> {
   const session = sandboxSessions[sessionId];
   if (!session) return;
 
@@ -101,7 +138,7 @@ export async function destroySandbox(sessionId: string): Promise<void> {
     await session.sandbox.kill();
     delete sandboxSessions[sessionId];
   } catch (error) {
-    logger.error("sandbox", "failed to kill", {
+    telemetry.logger.error("sandbox", "failed to kill", {
       sandboxId: session.sandbox.sandboxId,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -112,8 +149,11 @@ export async function destroySandbox(sessionId: string): Promise<void> {
  * Gets or creates the session's sandbox and, if it's a fresh one, replays
  * its recorded events onto it. Shared by the agent loop and the plain
  * sandbox-reopen / file-browsing routes — no LLM call happens here.
+ *
+ * DB writes: AgentSession, via getOrCreateSandbox (see its own comment).
+ * eventLog.getEvents only reads ToolInvocation here, never writes.
  */
-export async function openSandbox(
+async function openSandbox(
   sessionId: string,
   allowCreate: boolean,
   userId: string,
@@ -125,12 +165,12 @@ export async function openSandbox(
   );
 
   if (isNew) {
-    const priorEvents = await getEvents(sessionId);
+    const priorEvents = await eventLog.getEvents(sessionId);
     if (priorEvents.length > 0) {
       try {
-        await replayEvents(sandbox, priorEvents);
+        await executer.replayEvents(sandbox, priorEvents);
       } catch (error) {
-        logger.error("sandbox", "replay failed", {
+        telemetry.logger.error("sandbox", "replay failed", {
           error: error instanceof Error ? error.message : String(error),
         });
         await destroySandbox(sessionId);
@@ -146,12 +186,27 @@ export async function openSandbox(
 /**
  * Reopens a session's sandbox (creating + replaying it if the old one died)
  * and returns its preview URL. No LLM call, no tool loop — just the sandbox.
+ *
+ * This is also what the frontend's manual refresh button hits, so it
+ * restarts the dev server every call — the same stale-preview problem
+ * runAgent restarts for after a run (see its own comment) can show up here
+ * too, and a manual refresh is exactly when the user is asking to force past
+ * it, so the extra restart latency is expected rather than wasted.
  */
-export async function getSandboxUrl(
+async function getSandboxUrl(
   sessionId: string,
   userId: string,
 ): Promise<{ sessionId: string; previewUrl: string }> {
-  const { previewUrl } = await openSandbox(sessionId, false, userId);
+  const { sandbox, previewUrl } = await openSandbox(sessionId, false, userId);
+
+  try {
+    await restartDevServer(sandbox);
+  } catch (error) {
+    telemetry.logger.error("sandbox", "dev server restart failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   return { sessionId, previewUrl };
 }
 
@@ -160,22 +215,22 @@ export async function getSandboxUrl(
  * creates a sandbox for a session that doesn't exist — same reopen-only
  * semantics as getSandboxUrl.
  */
-export async function listSandboxFiles(
+async function listSandboxFiles(
   sessionId: string,
   userId: string,
 ): Promise<FileTreeNode[]> {
   const { sandbox } = await openSandbox(sessionId, false, userId);
-  return buildFileTree(sandbox);
+  return fileTree.buildFileTree(sandbox);
 }
 
 /** Reads one file's content for the code view. Reopen-only, same as above. */
-export async function readSandboxFile(
+async function readSandboxFile(
   sessionId: string,
   path: string,
   userId: string,
 ): Promise<string> {
   const { sandbox } = await openSandbox(sessionId, false, userId);
-  const content = await sandbox.files.read(resolvePath(path));
+  const content = await sandbox.files.read(executer.resolvePath(path));
   return typeof content === "string" ? content : String(content);
 }
 
@@ -196,18 +251,18 @@ function collectFilePaths(nodes: FileTreeNode[]): string[] {
  * as raw bytes (not text) so binary files — images, fonts — don't get
  * corrupted by a text decode/re-encode round trip.
  */
-export async function downloadSandboxZip(
+async function downloadSandboxZip(
   sessionId: string,
   userId: string,
 ): Promise<Archiver> {
   const { sandbox } = await openSandbox(sessionId, false, userId);
-  const tree = await buildFileTree(sandbox);
+  const tree = await fileTree.buildFileTree(sandbox);
   const filePaths = collectFilePaths(tree);
 
   const archive = new ZipArchive({ zlib: { level: 9 } });
 
   for (const path of filePaths) {
-    const content = await sandbox.files.read(resolvePath(path), {
+    const content = await sandbox.files.read(executer.resolvePath(path), {
       format: "bytes",
     });
     archive.append(Buffer.from(content), { name: path });
@@ -216,3 +271,16 @@ export async function downloadSandboxZip(
   void archive.finalize();
   return archive;
 }
+
+export const manager = {
+  getOrCreateSandbox,
+  getPreviewUrl,
+  updateSession,
+  restartDevServer,
+  destroySandbox,
+  openSandbox,
+  getSandboxUrl,
+  listSandboxFiles,
+  readSandboxFile,
+  downloadSandboxZip,
+};

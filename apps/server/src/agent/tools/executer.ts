@@ -1,20 +1,17 @@
 import type { Sandbox } from "e2b";
-import { logger } from "@/agent/telemetry";
+import { telemetry } from "@/agent/telemetry";
 import type { ToolCall } from "@/agent/types";
 
-export const E2B_APP_DIR = "/home/user/app";
+const E2B_APP_DIR = "/home/user/app";
 
-export function resolvePath(pathInput: string | undefined): string {
+function resolvePath(pathInput: string | undefined): string {
   const cleaned = (pathInput ?? "").replace(/^\/+/, "");
   if (cleaned.startsWith("home/user/app/")) return `/${cleaned}`;
   return `${E2B_APP_DIR}/${cleaned}`.replace(/\/$/, "");
 }
 
-export async function executeTool(
-  sandbox: Sandbox,
-  call: ToolCall,
-): Promise<string> {
-  logger.tool(call.name);
+async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<string> {
+  telemetry.logger.tool(call.name);
 
   try {
     switch (call.name) {
@@ -84,7 +81,7 @@ export async function executeTool(
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error("tool", `${call.name} failed`, { error: message });
+    telemetry.logger.error("tool", `${call.name} failed`, { error: message });
     return `Error running ${call.name}: ${message}`;
   }
 }
@@ -94,7 +91,7 @@ export async function executeTool(
  * in order, to rebuild the state a dead sandbox had. Used when a session's
  * sandbox died (idle timeout, crash) and a new one was just created.
  */
-export async function replayEvents(
+async function replayEvents(
   sandbox: Sandbox,
   calls: ToolCall[],
 ): Promise<void> {
@@ -108,3 +105,10 @@ export async function replayEvents(
     }
   }
 }
+
+export const executer = {
+  E2B_APP_DIR,
+  resolvePath,
+  executeTool,
+  replayEvents,
+};

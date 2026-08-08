@@ -12,6 +12,7 @@ import {
 } from "@/components/custom/form";
 import { Button } from "@package/ui/components/button";
 import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
 import {
   Card,
   CardContent,
@@ -61,6 +62,13 @@ export default function RegisterForm({
     });
   }
 
+  async function loginWithGithub() {
+    await signIn.social({
+      provider: "github",
+      callbackURL: `${FRONTEND_URL}/dashboard`,
+    });
+  }
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     mutate({
       email: values.email,
@@ -75,7 +83,7 @@ export default function RegisterForm({
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Create an account</CardTitle>
           <CardDescription>
-            Sign up with your Google account or Credentials
+            Sign up with your Google/GitHub account or Credentials
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -91,6 +99,15 @@ export default function RegisterForm({
                   >
                     <FcGoogle />
                     Sign up with Google
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={loginWithGithub}
+                    type="button"
+                    disabled={isPending}
+                  >
+                    <FaGithub />
+                    Sign up with GitHub
                   </Button>
                 </Field>
                 <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
@@ -187,7 +204,7 @@ export default function RegisterForm({
                   </Button>
                   <FieldDescription className="text-center">
                     Already have an account?{" "}
-                    <Link to="/auth/Login" className="underline">
+                    <Link to="/auth/login" className="underline">
                       Login
                     </Link>
                   </FieldDescription>

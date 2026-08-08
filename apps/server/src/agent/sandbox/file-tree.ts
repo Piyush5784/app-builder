@@ -1,5 +1,5 @@
 import type { Sandbox } from "e2b";
-import { resolvePath } from "@/agent/tools";
+import { executer } from "@/agent/tools/executer";
 
 export interface FileTreeNode {
   path: string;
@@ -25,12 +25,12 @@ function sortNodes(nodes: FileTreeNode[]): FileTreeNode[] {
   });
 }
 
-export async function buildFileTree(
+async function buildFileTree(
   sandbox: Sandbox,
   relativePath = "",
 ): Promise<FileTreeNode[]> {
   const entries = await sandbox.files.list(
-    resolvePath(relativePath || undefined),
+    executer.resolvePath(relativePath || undefined),
   );
 
   const nodes = await Promise.all(
@@ -54,3 +54,5 @@ export async function buildFileTree(
 
   return sortNodes(nodes);
 }
+
+export const fileTree = { buildFileTree };

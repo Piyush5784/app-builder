@@ -20,9 +20,6 @@ function write(
   else console.log(line);
 }
 
-// Only three things are worth a log line here: which tool ran, which
-// provider/model handled a call, and errors. Sandbox lifecycle, per-step
-// loop chatter, and socket connect/disconnect were pure noise.
 export const logger = {
   tool: (name: string) => write("info", "tool", name),
   model: (provider: string, model: string) =>
