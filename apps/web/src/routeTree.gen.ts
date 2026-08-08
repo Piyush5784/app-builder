@@ -13,11 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as AuthLoginIndexRouteImport } from './routes/auth/Login/index'
+import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
-import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard/Settings/index'
 import { Route as DashboardBuildSessionIdRouteImport } from './routes/dashboard/build/$sessionId'
+import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard/settings/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,8 +40,8 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   getParentRoute: () => DashboardRouteRoute,
 } as any)
 const AuthLoginIndexRoute = AuthLoginIndexRouteImport.update({
-  id: '/Login/',
-  path: '/Login/',
+  id: '/login/',
+  path: '/login/',
   getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthRegisterIndexRoute = AuthRegisterIndexRouteImport.update({
@@ -54,14 +54,14 @@ const AuthResetPasswordIndexRoute = AuthResetPasswordIndexRouteImport.update({
   path: '/reset-password/',
   getParentRoute: () => AuthRouteRoute,
 } as any)
-const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
-  id: '/Settings/',
-  path: '/Settings/',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
 const DashboardBuildSessionIdRoute = DashboardBuildSessionIdRouteImport.update({
   id: '/build/$sessionId',
   path: '/build/$sessionId',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
 
@@ -71,20 +71,20 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
-  '/auth/Login/': typeof AuthLoginIndexRoute
+  '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
-  '/dashboard/Settings/': typeof DashboardSettingsIndexRoute
+  '/dashboard/settings/': typeof DashboardSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
-  '/auth/Login': typeof AuthLoginIndexRoute
+  '/auth/login': typeof AuthLoginIndexRoute
   '/auth/register': typeof AuthRegisterIndexRoute
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
-  '/dashboard/Settings': typeof DashboardSettingsIndexRoute
+  '/dashboard/settings': typeof DashboardSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,10 +93,10 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
-  '/auth/Login/': typeof AuthLoginIndexRoute
+  '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
-  '/dashboard/Settings/': typeof DashboardSettingsIndexRoute
+  '/dashboard/settings/': typeof DashboardSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,20 +106,20 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/dashboard/'
     | '/dashboard/build/$sessionId'
-    | '/auth/Login/'
+    | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
-    | '/dashboard/Settings/'
+    | '/dashboard/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/dashboard'
     | '/dashboard/build/$sessionId'
-    | '/auth/Login'
+    | '/auth/login'
     | '/auth/register'
     | '/auth/reset-password'
-    | '/dashboard/Settings'
+    | '/dashboard/settings'
   id:
     | '__root__'
     | '/'
@@ -127,10 +127,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/dashboard/'
     | '/dashboard/build/$sessionId'
-    | '/auth/Login/'
+    | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
-    | '/dashboard/Settings/'
+    | '/dashboard/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -169,10 +169,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
-    '/auth/Login/': {
-      id: '/auth/Login/'
-      path: '/Login'
-      fullPath: '/auth/Login/'
+    '/auth/login/': {
+      id: '/auth/login/'
+      path: '/login'
+      fullPath: '/auth/login/'
       preLoaderRoute: typeof AuthLoginIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
@@ -190,18 +190,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthResetPasswordIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/dashboard/Settings/': {
-      id: '/dashboard/Settings/'
-      path: '/Settings'
-      fullPath: '/dashboard/Settings/'
-      preLoaderRoute: typeof DashboardSettingsIndexRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
     '/dashboard/build/$sessionId': {
       id: '/dashboard/build/$sessionId'
       path: '/build/$sessionId'
       fullPath: '/dashboard/build/$sessionId'
       preLoaderRoute: typeof DashboardBuildSessionIdRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/settings/': {
+      id: '/dashboard/settings/'
+      path: '/settings'
+      fullPath: '/dashboard/settings/'
+      preLoaderRoute: typeof DashboardSettingsIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
   }

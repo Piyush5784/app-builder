@@ -1,12 +1,6 @@
 import { prisma } from "@package/db";
 
-export async function createAgentEvent(
-  runId: string,
-  level: "info" | "warning" | "error",
-  message: string,
-  metadata?: unknown,
-): Promise<void> {
-  await prisma.agentEvent.create({
-    data: { runId, level, message, metadata: metadata as never },
-  });
-}
+export const agentEvents = {
+  create: (args: Parameters<typeof prisma.agentEvent.create>[0]) =>
+    prisma.agentEvent.create(args),
+};

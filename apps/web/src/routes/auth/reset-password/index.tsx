@@ -135,7 +135,7 @@ function RouteComponent() {
       </Card>
       <FieldDescription className="px-6 text-center">
         Need a new link? Go back to{" "}
-        <Link to="/auth/Login" className="underline">
+        <Link to="/auth/login" className="underline">
           login
         </Link>
         .

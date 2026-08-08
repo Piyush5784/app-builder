@@ -1,7 +1,5 @@
-export {
-  executeTool,
-  replayEvents,
-  resolvePath,
-  E2B_APP_DIR,
-} from "@/agent/tools/executer";
-export { tools } from "@/agent/tools/schema";
+import { executer } from "@/agent/tools/executer";
+import { tools } from "@/agent/tools/schema";
+
+export const toolsModule = { executer, schema: { tools } };
+export { tools };

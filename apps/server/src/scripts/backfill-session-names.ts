@@ -5,7 +5,15 @@
 //
 // Run from apps/server: bun run src/scripts/backfill-session-names.ts
 import { prisma } from "@package/db";
-import { updateAgentSessionName } from "@/agent/persistence";
+import { agent } from "@/agent";
+
+const MAX_SESSION_NAME_LENGTH = 100;
+
+function truncateSessionName(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed.length <= MAX_SESSION_NAME_LENGTH) return trimmed;
+  return `${trimmed.slice(0, MAX_SESSION_NAME_LENGTH)}…`;
+}
 
 async function main() {
   const unnamed = await prisma.agentSession.findMany({
@@ -17,7 +25,7 @@ async function main() {
 
   let updated = 0;
   for (const session of unnamed) {
-    const firstRun = await prisma.agentRun.findFirst({
+    const firstRun = await agent.persistence.agentRuns.findFirst({
       where: { sessionId: session.id },
       orderBy: { startedAt: "asc" },
       select: { prompt: true },
@@ -25,7 +33,10 @@ async function main() {
 
     if (!firstRun) continue;
 
-    await updateAgentSessionName(session.id, firstRun.prompt);
+    await agent.persistence.agentSessions.updateMany({
+      where: { id: session.id },
+      data: { name: truncateSessionName(firstRun.prompt) },
+    });
     updated++;
   }
 

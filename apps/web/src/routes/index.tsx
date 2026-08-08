@@ -119,7 +119,7 @@ function Hero() {
           <ArrowRight className="size-4" />
         </Link>
         <Link
-          to="/auth/Login"
+          to="/auth/login"
           className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-6 py-3 text-sm font-medium text-white/90 backdrop-blur-md transition-colors hover:bg-white/10"
         >
           Log in

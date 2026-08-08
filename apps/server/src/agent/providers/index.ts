@@ -74,7 +74,7 @@ const openaiProvider = createOpenAICompatProvider({
   },
 });
 
-export function getProvider(name?: ProviderName): LLMProvider {
+function getProvider(name?: ProviderName): LLMProvider {
   switch (name ?? PROVIDER) {
     case "gemini":
       return geminiProvider;
@@ -94,3 +94,5 @@ export function getProvider(name?: ProviderName): LLMProvider {
       return openRouterProvider;
   }
 }
+
+export const providers = { getProvider };

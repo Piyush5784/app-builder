@@ -1,1 +1,3 @@
-export { logger } from "@/agent/telemetry/logger";
+import { logger } from "@/agent/telemetry/logger";
+
+export const telemetry = { logger };

@@ -204,7 +204,7 @@ export default function RegisterForm({
                   </Button>
                   <FieldDescription className="text-center">
                     Already have an account?{" "}
-                    <Link to="/auth/Login" className="underline">
+                    <Link to="/auth/login" className="underline">
                       Login
                     </Link>
                   </FieldDescription>

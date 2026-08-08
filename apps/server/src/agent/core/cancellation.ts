@@ -1,4 +1,4 @@
-import { setCancelRequested, isCancelRequested } from "@/agent/persistence";
+import { persistence } from "@/agent/persistence";
 
 const POLL_INTERVAL_MS = 1000;
 
@@ -7,11 +7,19 @@ export interface RunWatcher {
   stop: () => void;
 }
 
+async function isCancelRequested(runId: string): Promise<boolean> {
+  const run = await persistence.agentRuns.findUnique({
+    where: { id: runId },
+    select: { cancelRequested: true },
+  });
+  return run?.cancelRequested ?? false;
+}
+
 // Watches `AgentRun.cancelRequested` for this run and aborts the local
 // controller as soon as another request sets it — no in-memory registry
 // needed, the poll lives entirely on the run's own call stack and dies
 // with it once `stop()` is called.
-export function watchForCancellation(runId: string): RunWatcher {
+function watchForCancellation(runId: string): RunWatcher {
   const controller = new AbortController();
   const interval = setInterval(() => {
     isCancelRequested(runId)
@@ -33,6 +41,18 @@ export function watchForCancellation(runId: string): RunWatcher {
 // and flagged, false if there was nothing to cancel. The run's own watcher
 // (above) picks this up within one poll interval and aborts itself; this
 // function never touches the AbortController directly.
-export async function cancelRun(sessionId: string): Promise<boolean> {
-  return setCancelRequested(sessionId);
+async function cancelRun(sessionId: string): Promise<boolean> {
+  const run = await persistence.agentRuns.findFirst({
+    where: { sessionId, status: "running" },
+    orderBy: { startedAt: "desc" },
+    select: { id: true },
+  });
+  if (!run) return false;
+  await persistence.agentRuns.update({
+    where: { id: run.id },
+    data: { cancelRequested: true },
+  });
+  return true;
 }
+
+export const cancellation = { watchForCancellation, cancelRun };

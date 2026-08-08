@@ -96,7 +96,7 @@ export function useRegister() {
       });
 
       navigate({
-        to: "/auth/Login",
+        to: "/auth/login",
       });
     },
 
@@ -186,7 +186,7 @@ export function useResetPassword() {
 
     onSuccess: () => {
       toast.success("Password reset — you can now log in");
-      navigate({ to: "/auth/Login" });
+      navigate({ to: "/auth/login" });
     },
 
     onError: (error) => {
@@ -268,7 +268,7 @@ export function useUser() {
   useEffect(() => {
     if (!isPending && !data?.user) {
       // navigate({
-      //   to: "/auth/Login",
+      //   to: "/auth/login",
       // });
     }
   }, [isPending, data?.user, navigate]);

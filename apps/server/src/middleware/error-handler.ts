@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { createErrorResponse } from "@/types/api-response";
+import { SessionNotFoundError } from "@/agent/sandbox";
+import { InsufficientCreditsError } from "@/agent/core/agent-runtime";
 
 export class ApiError extends Error {
   statusCode: number;
@@ -9,6 +11,15 @@ export class ApiError extends Error {
     this.statusCode = statusCode;
   }
 }
+
+// Domain errors thrown from agent/* that map to a specific HTTP status here,
+// so route handlers don't each need their own try/catch translating them —
+// see agent.routes.ts, which just lets these propagate to asyncHandler's
+// .catch(next).
+const domainErrorStatus = new Map<Function, number>([
+  [SessionNotFoundError, 404],
+  [InsufficientCreditsError, 402],
+]);
 
 type AsyncRouteHandler = (
   req: Request,
@@ -30,6 +41,13 @@ export function errorHandler(
 ) {
   if (err instanceof ApiError) {
     return res.status(err.statusCode).json(createErrorResponse(err.message));
+  }
+
+  if (err instanceof Error) {
+    const status = domainErrorStatus.get(err.constructor);
+    if (status !== undefined) {
+      return res.status(status).json(createErrorResponse(err.message));
+    }
   }
 
   console.error(err);

@@ -15,7 +15,7 @@ export interface ModelOption {
   tier: "free" | "paid";
 }
 
-export const MODEL_REGISTRY: ModelOption[] = [
+const MODEL_REGISTRY: ModelOption[] = [
   {
     id: "nvidia",
     provider: "nvidia",
@@ -55,9 +55,16 @@ export const MODEL_REGISTRY: ModelOption[] = [
 
 const MODEL_BY_ID = new Map(MODEL_REGISTRY.map((m) => [m.id, m]));
 
-export function getModelOption(id: unknown): ModelOption | undefined {
+function getModelOption(id: unknown): ModelOption | undefined {
   return typeof id === "string" ? MODEL_BY_ID.get(id) : undefined;
 }
 
-export const FREE_MODEL_CREDITS_PER_CALL = 0.5;
-export const USD_PER_CREDIT = 0.01;
+const FREE_MODEL_CREDITS_PER_CALL = 0.5;
+const USD_PER_CREDIT = 0.01;
+
+export const models = {
+  MODEL_REGISTRY,
+  getModelOption,
+  FREE_MODEL_CREDITS_PER_CALL,
+  USD_PER_CREDIT,
+};

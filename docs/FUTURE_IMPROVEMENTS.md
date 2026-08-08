@@ -12,7 +12,7 @@ Before running the main agent loop, use a cheap/fast classification step to dete
 
 ## 3. Multiple sandbox templates in the app builder
 
-Currently only one E2B template exists (bare Vite + React + TS, see `old/e2b.Dockerfile`). Offer several purpose-built templates instead — e.g. the planned Tailwind + shadcn/ui template, plus others (Next.js, a dashboard-focused stack, plain HTML/CSS/JS) — so the generated app starts from a stack suited to what's being built, not one generic scaffold for everything.
+Currently only one E2B template exists (bare Vite + React + TS, see `apps/server/e2b/e2b.Dockerfile`). Offer several purpose-built templates instead — e.g. the planned Tailwind + shadcn/ui template, plus others (Next.js, a dashboard-focused stack, plain HTML/CSS/JS) — so the generated app starts from a stack suited to what's being built, not one generic scaffold for everything.
 
 ## 4. LLM auto-selects the template
 
