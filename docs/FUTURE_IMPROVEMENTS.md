@@ -37,7 +37,7 @@ Two distinct pieces, matching how Vercel/Lovable/bolt.new structure this:
   - Not connected yet → show "Connect GitHub", then continue into the save flow once authorized.
   - Already connected → "Save to GitHub" directly.
   - First save for a session: create a new repo via the GitHub API, named after the session/project.
-  - Subsequent saves for the same session: push to the *same* repo (commit + push) rather than creating a new one each time — needs the repo's identity tracked against the session once created.
+  - Subsequent saves for the same session: push to the _same_ repo (commit + push) rather than creating a new one each time — needs the repo's identity tracked against the session once created.
   - For actually getting the code there: run real `git` commands (`init`, `add`, `commit`, `push`) inside the E2B sandbox itself using the stored token as the credential — the sandbox already has git and the full working tree, so this is simpler and more robust than re-uploading every file through GitHub's Contents API, and it's the approach these tools actually use in practice.
 
 ## 8. Model picker in the UI
