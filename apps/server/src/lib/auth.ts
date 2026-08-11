@@ -28,11 +28,12 @@ const options = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
-    github: {
-      enabled: true,
-      clientId: process.env.GH_CLIENT_ID!,
-      clientSecret: process.env.GH_CLIENT_SECRET!,
-    },
+    // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
+    // github: {
+    //   enabled: true,
+    //   clientId: process.env.GH_CLIENT_ID!,
+    //   clientSecret: process.env.GH_CLIENT_SECRET!,
+    // },
   },
 
   // Email + password login/registration

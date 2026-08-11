@@ -12,7 +12,8 @@ import {
 } from "@/components/custom/form";
 import { Button } from "@package/ui/components/button";
 import { FcGoogle } from "react-icons/fc";
-import { FaGithub } from "react-icons/fa";
+// Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
+// import { FaGithub } from "react-icons/fa";
 import {
   Card,
   CardContent,
@@ -62,12 +63,13 @@ export default function RegisterForm({
     });
   }
 
-  async function loginWithGithub() {
-    await signIn.social({
-      provider: "github",
-      callbackURL: `${FRONTEND_URL}/dashboard`,
-    });
-  }
+  // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
+  // async function loginWithGithub() {
+  //   await signIn.social({
+  //     provider: "github",
+  //     callbackURL: `${FRONTEND_URL}/dashboard`,
+  //   });
+  // }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     mutate({
@@ -83,7 +85,7 @@ export default function RegisterForm({
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Create an account</CardTitle>
           <CardDescription>
-            Sign up with your Google/GitHub account or Credentials
+            Sign up with your Google account or Credentials
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -100,7 +102,8 @@ export default function RegisterForm({
                     <FcGoogle />
                     Sign up with Google
                   </Button>
-                  <Button
+                  {/* Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET. */}
+                  {/* <Button
                     variant="outline"
                     onClick={loginWithGithub}
                     type="button"
@@ -108,7 +111,7 @@ export default function RegisterForm({
                   >
                     <FaGithub />
                     Sign up with GitHub
-                  </Button>
+                  </Button> */}
                 </Field>
                 <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                   Or continue with
