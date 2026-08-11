@@ -94,6 +94,8 @@ const streamdownPlugins = { cjk, code, math, mermaid };
 // Every model is billed on usage, so all of them show disabled once credits
 // run out — the backend is the real gate (see agent-runtime.ts), this is
 // just so the picker doesn't offer an option that would immediately fail.
+// Only nvidia is enabled for now — the other providers are registered but
+// not yet offered to users.
 function ModelPicker({
   models,
   value,
@@ -124,7 +126,11 @@ function ModelPicker({
       </SelectTrigger>
       <SelectContent>
         {models.map((model) => (
-          <SelectItem key={model.id} value={model.id} disabled={credits <= 0}>
+          <SelectItem
+            key={model.id}
+            value={model.id}
+            disabled={credits <= 0 || model.id !== "nvidia"}
+          >
             {model.label}
           </SelectItem>
         ))}
