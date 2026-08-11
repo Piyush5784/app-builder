@@ -23,11 +23,14 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .env.test.local
 .env.production.local
 .env.local
+*.env.prod
 temp.html
 e2b.toml
 
+routeTree.gen.ts
 
 
+.wrangler
 SCHEMA.md
 graphify-out
 # caches
@@ -64,3 +67,5 @@ apps/web/playwright-report
 apps/web/test-results
 apps/web/blob-report
 apps/web/playwright/.auth
+
+DEPLOY_SERVER.md

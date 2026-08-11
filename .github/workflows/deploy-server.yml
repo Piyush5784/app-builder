@@ -1,66 +1,92 @@
-# name: Deploy Server
+name: Deploy Server
 
-# on:
-#   push:
-#     branches: [main]
-#   workflow_dispatch: {}
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: {}
 
-# concurrency:
-#   group: deploy-server
-#   cancel-in-progress: false
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
 
-# jobs:
-#   deploy:
-#     name: Deploy apps/server to AWS
-#     runs-on: ubuntu-latest
-#     environment: production
+jobs:
+  deploy:
+    name: Deploy apps/server to EC2
+    runs-on: ubuntu-latest
+    environment: production
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
-#     steps:
-#       - name: Checkout
-#         uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-#       - name: Set up Bun
-#         uses: oven-sh/setup-bun@v2
-#         with:
-#           bun-version: "1.3.14"
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
 
-#       - name: Configure AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v4
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-region: ${{ vars.AWS_REGION }}
+      - name: Install
+        run: bun install --frozen-lockfile
 
-#       - name: Install
-#         run: bun install --frozen-lockfile
+      - name: Build server
+        run: bun run --cwd apps/server build
 
-#       - name: Deploy
-#         run: bunx sst deploy --stage production
-#         env:
-#           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-#           BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
-#           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-#           # Should be Neon's *pooled* connection string for this deploy —
-#           # see sst.config.ts's comment on DATABASE_URL.
-#           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Push secrets to SSM Parameter Store
+        run: |
+          put() {
+            aws ssm put-parameter --cli-input-json "$(jq -n \
+              --arg name "/app-builder/production/$1" \
+              --arg value "$2" \
+              '{Name: $name, Value: $value, Type: "SecureString", Overwrite: true}')"
+          }
+          put PORT "3001"
+          put NODE_ENV "production"
+          put FRONTEND_URL "${{ vars.FRONTEND_URL }}"
+          put BETTER_AUTH_URL "${{ vars.BETTER_AUTH_URL }}"
+          put BETTER_AUTH_SECRET "${{ secrets.BETTER_AUTH_SECRET }}"
+          put DATABASE_URL "${{ secrets.DATABASE_URL }}"
+          put UPSTASH_REDIS_REST_URL "${{ secrets.UPSTASH_REDIS_REST_URL }}"
+          put UPSTASH_REDIS_REST_TOKEN "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}"
+          put GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}"
+          put GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}"
+          put GH_CLIENT_ID "${{ secrets.GH_CLIENT_ID }}"
+          put GH_CLIENT_SECRET "${{ secrets.GH_CLIENT_SECRET }}"
+          put RESEND_API_KEY "${{ secrets.RESEND_API_KEY }}"
+          put GEMINI_API_KEY "${{ secrets.GEMINI_API_KEY }}"
+          put NVIDIA_API_KEY "${{ secrets.NVIDIA_API_KEY }}"
+          put GROQ_API_KEY "${{ secrets.GROQ_API_KEY }}"
+          put OPENAI_API_KEY "${{ secrets.OPENAI_API_KEY }}"
+          put ANTHROPIC_API_KEY "${{ secrets.ANTHROPIC_API_KEY }}"
+          put E2B_API_KEY "${{ secrets.E2B_API_KEY }}"
+          put E2B_TEMPLATE_ID "${{ vars.E2B_TEMPLATE_ID }}"
+          put SANDBOX_TIMEOUT_MS "${{ vars.SANDBOX_TIMEOUT_MS }}"
 
-#           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-#           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      - name: Copy build to the instance
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          source: "apps/server/dist/index.js"
+          target: "/opt/app-builder"
+          strip_components: 2
 
-#           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-#           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-#           GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
-#           GH_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
-
-#           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-
-#           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-#           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-#           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-#           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-#           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-#           E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
-#           E2B_TEMPLATE_ID: ${{ vars.E2B_TEMPLATE_ID }}
-#           SANDBOX_TIMEOUT_MS: ${{ vars.SANDBOX_TIMEOUT_MS }}
+      - name: Restart via pm2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            pm2 restart app-builder-server --update-env
