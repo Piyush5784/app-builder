@@ -13,6 +13,7 @@
   "dependencies": {
     "@package/db": "workspace:*",
     "@package/shared": "workspace:*",
+    "@upstash/redis": "^1.38.2",
     "@zenstackhq/orm": "^3.8.3",
     "@zenstackhq/plugin-policy": "^3.8.3",
     "@zenstackhq/server": "^3.8.3",

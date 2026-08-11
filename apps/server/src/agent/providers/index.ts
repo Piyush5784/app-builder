@@ -3,49 +3,22 @@ import { createOpenAICompatProvider } from "@/agent/providers/openai-compat";
 import { geminiProvider } from "@/agent/providers/gemini";
 import { anthropicProvider } from "@/agent/providers/anthropic";
 import {
-  OPENROUTER_API_KEY,
-  OPENROUTER_MODEL,
-  OLLAMA_MODEL,
-  OLLAMA_BASE_URL,
   NVIDIA_API_KEY,
   NVIDIA_MODEL,
   GROQ_API_KEY,
   GROQ_MODEL,
   OPENAI_API_KEY,
   OPENAI_MODEL,
-  PROVIDER,
 } from "@/config";
 
-export type ProviderName =
-  | "openrouter"
-  | "gemini"
-  | "ollama"
-  | "nvidia"
-  | "groq"
-  | "openai"
-  | "anthropic";
+// One provider per MODEL_REGISTRY entry (see agent/models.ts) — every model
+// is pinned to exactly one provider, so there's no separate configurable
+// "default provider" concept.
+export type ProviderName = "gemini" | "nvidia" | "groq" | "openai" | "anthropic";
 
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
 const OPENAI_BASE_URL = "https://api.openai.com/v1/chat/completions";
-
-const openRouterProvider = createOpenAICompatProvider({
-  providerLabel: "openrouter",
-  url: OPENROUTER_BASE_URL,
-  model: OPENROUTER_MODEL,
-  headers: {
-    Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-    "HTTP-Referer": "http://localhost",
-    "X-Title": "lovable-clone",
-  },
-});
-
-const ollamaProvider = createOpenAICompatProvider({
-  providerLabel: "ollama",
-  url: OLLAMA_BASE_URL,
-  model: OLLAMA_MODEL,
-});
 
 const nvidiaProvider = createOpenAICompatProvider({
   providerLabel: "nvidia",
@@ -74,12 +47,13 @@ const openaiProvider = createOpenAICompatProvider({
   },
 });
 
-function getProvider(name?: ProviderName): LLMProvider {
-  switch (name ?? PROVIDER) {
+// The provider always comes from the caller's resolved ModelOption (see
+// agent-runtime.ts) — no env-var-based default, since a model is always
+// selected before this is called.
+function getProvider(name: ProviderName): LLMProvider {
+  switch (name) {
     case "gemini":
       return geminiProvider;
-    case "ollama":
-      return ollamaProvider;
     case "nvidia":
       return nvidiaProvider;
     case "groq":
@@ -88,10 +62,6 @@ function getProvider(name?: ProviderName): LLMProvider {
       return openaiProvider;
     case "anthropic":
       return anthropicProvider;
-    case "openrouter":
-      return openRouterProvider;
-    default:
-      return openRouterProvider;
   }
 }
 

@@ -9,17 +9,6 @@ import { fileTree, type FileTreeNode } from "@/agent/sandbox/file-tree";
 
 const E2B_DEV_PORT = 5173;
 
-interface SandboxSession {
-  sandbox: Sandbox;
-  lastActiveAt: number;
-}
-
-const sandboxSessions: Record<string, SandboxSession> = {};
-
-function isExpired(session: SandboxSession): boolean {
-  return Date.now() - session.lastActiveAt > SANDBOX_TIMEOUT_MS;
-}
-
 export class SessionNotFoundError extends Error {
   constructor(sessionId: string) {
     super(`Session ${sessionId} does not exist`);
@@ -32,52 +21,62 @@ export interface SandboxHandle {
   isNew: boolean;
 }
 
-// DB writes: AgentSession — updateMany (lastActiveAt) on the warm path, or
-// upsert (create/refresh) once a new sandbox is up.
+/**
+ * WHY:
+ * No in-process cache — `AgentSession.sandboxId` + `lastActiveAt` in the DB
+ * is the only source of truth for which E2B sandbox belongs to a session.
+ * Any request can be served by any server process (no sticky routing, safe
+ * to restart or run more than one instance) because nothing about a live
+ * sandbox connection lives only in one process's memory.
+ *
+ * CONTEXT:
+ * `Sandbox.connect(sandboxId)` reconnects to an already-running remote
+ * sandbox by id — if it's died (idle timeout, crash) this throws and falls
+ * through to creating a fresh one, same fallback the old in-memory version
+ * had for a cached handle that stopped responding.
+ *
+ * DB writes: AgentSession — updateMany (lastActiveAt) on the warm reconnect
+ * path, or upsert (create/refresh) once a new sandbox is up.
+ */
 async function getOrCreateSandbox(
   sessionId: string,
   allowCreate: boolean,
   userId: string,
 ): Promise<SandboxHandle> {
-  const owner = await persistence.agentSessions.findUnique({
+  const existing = await persistence.agentSessions.findUnique({
     where: { id: sessionId },
-    select: { userId: true },
+    select: { userId: true, sandboxId: true, lastActiveAt: true },
   });
-  const ownerId = owner?.userId ?? null;
 
-  if (ownerId !== null && ownerId !== userId) {
+  if (existing !== null && existing.userId !== userId) {
     throw new SessionNotFoundError(sessionId);
   }
-  if (ownerId === null && !allowCreate) {
+  if (existing === null && !allowCreate) {
     throw new SessionNotFoundError(sessionId);
   }
 
-  const existingSession = sandboxSessions[sessionId];
+  const isExpired =
+    existing !== null &&
+    Date.now() - existing.lastActiveAt.getTime() > SANDBOX_TIMEOUT_MS;
 
-  if (existingSession && !isExpired(existingSession)) {
+  if (existing !== null && !isExpired) {
     try {
-      await existingSession.sandbox.setTimeout(SANDBOX_TIMEOUT_MS);
-      existingSession.lastActiveAt = Date.now();
+      const sandbox = await Sandbox.connect(existing.sandboxId);
+      await sandbox.setTimeout(SANDBOX_TIMEOUT_MS);
       await persistence.agentSessions.updateMany({
         where: { id: sessionId },
         data: { lastActiveAt: new Date() },
       });
-      return { sandbox: existingSession.sandbox, isNew: false };
+      return { sandbox, isNew: false };
     } catch {
-      // Expected when the old sandbox already died (idle timeout, restart) —
-      // not an error worth a stack trace, just move on and create a fresh one.
-      delete sandboxSessions[sessionId];
+      // Expected when the old sandbox already died (idle timeout, crash) —
+      // not an error worth a stack trace, just fall through to a fresh one.
     }
   }
 
   const newSandbox = await Sandbox.create(E2B_TEMPLATE_ID, {
     timeoutMs: SANDBOX_TIMEOUT_MS,
   });
-
-  sandboxSessions[sessionId] = {
-    sandbox: newSandbox,
-    lastActiveAt: Date.now(),
-  };
 
   await persistence.agentSessions.upsert({
     where: { id: sessionId },
@@ -94,8 +93,6 @@ function getPreviewUrl(sandbox: Sandbox): string {
 
 // DB writes: AgentSession — updateMany (lastActiveAt).
 async function updateSession(sessionId: string): Promise<void> {
-  const session = sandboxSessions[sessionId];
-  if (session) session.lastActiveAt = Date.now();
   await persistence.agentSessions.updateMany({
     where: { id: sessionId },
     data: { lastActiveAt: new Date() },
@@ -130,16 +127,20 @@ async function restartDevServer(sandbox: Sandbox): Promise<void> {
   });
 }
 
+// Kills by id (SandboxApi.kill is static) — no live handle needed, so this
+// works even for a sandbox this process never itself connected to.
 async function destroySandbox(sessionId: string): Promise<void> {
-  const session = sandboxSessions[sessionId];
-  if (!session) return;
+  const existing = await persistence.agentSessions.findUnique({
+    where: { id: sessionId },
+    select: { sandboxId: true },
+  });
+  if (!existing) return;
 
   try {
-    await session.sandbox.kill();
-    delete sandboxSessions[sessionId];
+    await Sandbox.kill(existing.sandboxId);
   } catch (error) {
     telemetry.logger.error("sandbox", "failed to kill", {
-      sandboxId: session.sandbox.sandboxId,
+      sandboxId: existing.sandboxId,
       error: error instanceof Error ? error.message : String(error),
     });
   }

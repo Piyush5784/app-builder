@@ -82,15 +82,19 @@ jobs:
           BETTER_AUTH_SECRET: ci-only-dummy-secret-not-used-for-real-auth
           GOOGLE_CLIENT_ID: ci-dummy
           GOOGLE_CLIENT_SECRET: ci-dummy
+          GH_CLIENT_ID: ci-dummy
+          GH_CLIENT_SECRET: ci-dummy
+          UPSTASH_REDIS_REST_URL: http://localhost:8079
+          UPSTASH_REDIS_REST_TOKEN: ci-dummy
           RESEND_API_KEY: ci-dummy
-          PROVIDER: ollama
-          OPENROUTER_API_KEY: ci-dummy
           GEMINI_API_KEY: ci-dummy
           NVIDIA_API_KEY: ci-dummy
+          GROQ_API_KEY: ci-dummy
+          OPENAI_API_KEY: ci-dummy
+          ANTHROPIC_API_KEY: ci-dummy
           E2B_API_KEY: ci-dummy
           E2B_TEMPLATE_ID: ci-dummy
           SANDBOX_TIMEOUT_MS: "300000"
-          MAX_AGENT_ITERATIONS: "6"
         run: |
           # The server needs a migrated DB to boot cleanly — folded in here
           # rather than as its own step since that's not a separate check

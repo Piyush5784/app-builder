@@ -4,6 +4,7 @@ import { prisma } from "@package/db";
 import { customSession, magicLink } from "better-auth/plugins";
 import { sendEmail } from "@/lib/email";
 import { createAuthMiddleware } from "better-auth/api";
+import { redis } from "@/lib/redis";
 import z from "zod";
 
 export const passwordSchema = z
@@ -29,8 +30,8 @@ const options = {
     },
     github: {
       enabled: true,
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      clientId: process.env.GH_CLIENT_ID!,
+      clientSecret: process.env.GH_CLIENT_SECRET!,
     },
   },
 
@@ -98,6 +99,26 @@ const options = {
     },
   },
 
+  // Shares the same Upstash-backed store as express-rate-limit (see
+  // lib/redis.ts) — without this, better-auth's own rate limiter (which
+  // already has strict built-in rules for /sign-in, /sign-up, etc.) counts
+  // per-process, same multi-instance gap that motivated adding Redis here.
+  secondaryStorage: {
+    get: (key) => redis.getData(key),
+    set: async (key, value, ttl) => {
+      if (ttl) await redis.setData(key, value, ttl);
+      else await redis.setData(key, value);
+    },
+    delete: async (key) => {
+      await redis.deleteData(key);
+    },
+    increment: (key, ttl) => redis.incrementData(key, ttl),
+    getAndDelete: (key) => redis.getAndDeleteData(key),
+  },
+  rateLimit: {
+    enabled: true,
+  },
+
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
 
@@ -107,14 +128,7 @@ const options = {
 export const auth = betterAuth({
   ...options,
   plugins: [
-    // passing `options` as the second argument is what makes user.username,
-    // user.bio, etc. properly typed inside this callback instead of falling
-    // back to the base User type
     customSession(async ({ user, session }) => {
-      // Fetched separately, not via additionalFields — `credits` is a
-      // Prisma Decimal, and better-auth's internal adapter structuredClone()s
-      // the raw user row for fields it manages itself, which throws on a
-      // Decimal instance. Converting to a plain number here avoids that.
       const row = await prisma.user.findUnique({
         where: { id: user.id },
         select: { credits: true },

@@ -1,5 +1,4 @@
 import type { Sandbox } from "e2b";
-import { MAX_AGENT_ITERATIONS } from "@/config";
 import { SYSTEM_PROMPT } from "@/agent/core/prompt";
 import { providers } from "@/agent/providers";
 import { models, type ModelOption } from "@/agent/models";
@@ -58,7 +57,10 @@ async function runLoop(
   let finalReply = "";
   let filesChanged = false;
 
-  for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
+  // No fixed step cap — the loop runs until the model finishes on its own,
+  // the run is cancelled, or the user runs out of credits (checked every
+  // iteration below); credits are the actual bound on how long this can go.
+  for (let i = 0; ; i++) {
     if (signal.aborted) break;
 
     const step = i + 1;
@@ -235,25 +237,6 @@ async function runLoop(
     }
 
     if (signal.aborted) break;
-
-    // If we reach the max iterations, we set a final reply indicating that the step limit was reached.
-    if (i === MAX_AGENT_ITERATIONS - 1) {
-      finalReply =
-        "Reached the step limit before finishing. Try again with a more specific request.";
-      telemetry.logger.error("loop", "step limit reached without finishing", {
-        maxSteps: MAX_AGENT_ITERATIONS,
-      });
-
-      await persistence.agentEvents.create({
-        data: {
-          runId,
-          level: "warning",
-          message: "step limit reached without finishing",
-          metadata: { maxSteps: MAX_AGENT_ITERATIONS } as never,
-        },
-      });
-      messages.push({ role: "assistant", content: finalReply });
-    }
   }
 
   if (signal.aborted) {
