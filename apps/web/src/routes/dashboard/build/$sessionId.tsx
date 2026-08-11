@@ -290,7 +290,7 @@ function BuildWorkspace() {
                   handleSend();
                 }
               }}
-              className="min-h-28 resize-none pb-11 pr-12 text-white bg-black!"
+              className="min-h-28 resize-none bg-black! pr-12 pb-11 text-white"
             />
             {modelsQuery.data && (
               <div className="absolute bottom-2.5 left-2.5">
@@ -305,7 +305,7 @@ function BuildWorkspace() {
             )}
             <Button
               size="icon-sm"
-              className="absolute bottom-2.5 right-2.5"
+              className="absolute right-2.5 bottom-2.5"
               disabled={!prompt.trim() || isGenerating}
               onClick={handleSend}
             >
@@ -320,7 +320,7 @@ function BuildWorkspace() {
                 type="button"
                 disabled={isGenerating}
                 onClick={() => setPrompt(example)}
-                className="rounded-md bg-white border border-border px-3 py-1.5 text-xs text-black transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                className="rounded-md border border-border bg-white px-3 py-1.5 text-xs text-black transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
               >
                 {example}
               </button>
@@ -412,7 +412,7 @@ function BuildWorkspace() {
                   cancelGeneration.mutate();
                 }
               }}
-              className="min-h-20 resize-none pb-9 pr-12 text-sm"
+              className="min-h-20 resize-none pr-12 pb-9 text-sm"
             />
             {modelsQuery.data && (
               <div className="absolute bottom-2 left-2">
@@ -428,7 +428,7 @@ function BuildWorkspace() {
             {isGenerating ? (
               <Button
                 size="icon-sm"
-                className="absolute bottom-2 right-2"
+                className="absolute right-2 bottom-2"
                 disabled={cancelGeneration.isPending}
                 onClick={() => cancelGeneration.mutate()}
                 title="Stop generating (Esc)"
@@ -438,7 +438,7 @@ function BuildWorkspace() {
             ) : (
               <Button
                 size="icon-sm"
-                className="absolute bottom-2 right-2"
+                className="absolute right-2 bottom-2"
                 disabled={!prompt.trim()}
                 onClick={handleSend}
               >
@@ -457,10 +457,10 @@ function BuildWorkspace() {
         className="flex h-full min-h-0 flex-col overflow-hidden"
       >
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <div className="flex items-center gap-0.5    bg-muted p-0.5">
+          <div className="flex items-center gap-0.5 bg-muted p-0.5">
             <Button
               size="xs"
-              className="  px-3"
+              className="px-3"
               variant={view === "preview" ? "default" : "ghost"}
               onClick={() => setView("preview")}
             >
@@ -468,7 +468,7 @@ function BuildWorkspace() {
             </Button>
             <Button
               size="xs"
-              className="  px-3"
+              className="px-3"
               variant={view === "code" ? "default" : "ghost"}
               onClick={() => setView("code")}
             >
@@ -476,7 +476,7 @@ function BuildWorkspace() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-0.5   border border-border bg-muted/40 p-0.5">
+          <div className="flex items-center gap-0.5 border border-border bg-muted/40 p-0.5">
             <Button
               variant="ghost"
               size="icon-xs"
@@ -514,12 +514,12 @@ function BuildWorkspace() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-0.5   border border-border bg-muted/40 p-0.5">
+          <div className="flex items-center gap-0.5 border border-border bg-muted/40 p-0.5">
             <DropdownMenu>
               <Button
                 size="xs"
                 variant="ghost"
-                className="  px-3"
+                className="px-3"
                 render={<DropdownMenuTrigger />}
               >
                 {isDownloadingZip ? (
@@ -554,7 +554,7 @@ function BuildWorkspace() {
             <Button
               size="xs"
               variant="ghost"
-              className="  px-3"
+              className="px-3"
               onClick={handleShare}
             >
               <Share2Icon className="size-3.5" /> Share
@@ -606,7 +606,7 @@ function BuildWorkspace() {
                 </div>
               )}
             </div>
-            <div className="flex-1 ">
+            <div className="flex-1">
               {selectedPath ? (
                 fileQuery.isLoading ? (
                   <div className="flex size-full items-center justify-center">

@@ -130,7 +130,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
     }, [data, expandAll, initialSelectedItemId]);
 
     return (
-      <div className={cn("overflow-hidden relative p-2", className)}>
+      <div className={cn("relative overflow-hidden p-2", className)}>
         <TreeItem
           data={data}
           ref={ref}
@@ -147,7 +147,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
           {...props}
         />
         <div
-          className="w-full h-[48px]"
+          className="h-[48px] w-full"
           onDrop={() => {
             handleDrop({ id: "", name: "parent_div" });
           }}
@@ -339,12 +339,12 @@ const TreeNode = ({
                 isOpen={isOpen}
                 default={defaultNodeIcon}
               />
-              <span className="text-sm truncate">{item.name}</span>
+              <span className="truncate text-sm">{item.name}</span>
               <TreeActions isSelected={isSelected}>{item.actions}</TreeActions>
             </>
           )}
         </AccordionTrigger>
-        <AccordionContent className="ml-4 pl-1 border-l">
+        <AccordionContent className="ml-4 border-l pl-1">
           <TreeItem
             data={item.children ? item.children : item}
             selectedItemId={selectedItemId}
@@ -433,12 +433,12 @@ const TreeLeaf = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "ml-5 flex text-left items-center py-2 cursor-pointer before:right-1",
+          "ml-5 flex cursor-pointer items-center py-2 text-left before:right-1",
           treeVariants(),
           className,
           isSelected && selectedTreeVariants(),
           isDragOver && dragOverVariants(),
-          item.disabled && "opacity-50 cursor-not-allowed pointer-events-none",
+          item.disabled && "pointer-events-none cursor-not-allowed opacity-50",
           item.className,
         )}
         onClick={() => {
@@ -455,7 +455,7 @@ const TreeLeaf = React.forwardRef<
       >
         {renderItem ? (
           <>
-            <div className="h-4 w-4 shrink-0 mr-1" />
+            <div className="mr-1 h-4 w-4 shrink-0" />
             {renderItem({
               item,
               level,
@@ -471,7 +471,7 @@ const TreeLeaf = React.forwardRef<
               isSelected={isSelected}
               default={defaultLeafIcon}
             />
-            <span className="flex-grow text-sm truncate">{item.name}</span>
+            <span className="flex-grow truncate text-sm">{item.name}</span>
             <TreeActions isSelected={isSelected && !item.disabled}>
               {item.actions}
             </TreeActions>
@@ -491,12 +491,12 @@ const AccordionTrigger = React.forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex flex-1 w-full items-center py-2 transition-all first:[&[data-state=open]>svg]:first-of-type:rotate-90",
+        "flex w-full flex-1 items-center py-2 transition-all first:[&[data-state=open]>svg]:first-of-type:rotate-90",
         className,
       )}
       {...props}
     >
-      <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200 text-accent-foreground/50 mr-1" />
+      <ChevronRight className="mr-1 h-4 w-4 shrink-0 text-accent-foreground/50 transition-transform duration-200" />
       {children}
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
@@ -515,7 +515,7 @@ const AccordionContent = React.forwardRef<
     )}
     {...props}
   >
-    <div className="pb-1 pt-0">{children}</div>
+    <div className="pt-0 pb-1">{children}</div>
   </AccordionPrimitive.Content>
 ));
 AccordionContent.displayName = AccordionPrimitive.Content.displayName;
@@ -540,7 +540,7 @@ const TreeIcon = ({
   } else if (item.icon) {
     Icon = item.icon;
   }
-  return Icon ? <Icon className="h-4 w-4 shrink-0 mr-2" /> : <></>;
+  return Icon ? <Icon className="mr-2 h-4 w-4 shrink-0" /> : <></>;
 };
 
 const TreeActions = ({
