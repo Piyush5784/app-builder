@@ -65,7 +65,7 @@ function AuthLayout() {
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
-        <blockquote className="absolute bottom-10 left-10 right-10 space-y-2 text-white">
+        <blockquote className="absolute right-10 bottom-10 left-10 space-y-2 text-white">
           <p className="text-lg font-medium">&ldquo;{quote}&rdquo;</p>
           <footer className="text-sm text-white/70">— {author}</footer>
         </blockquote>
