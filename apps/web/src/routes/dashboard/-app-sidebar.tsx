@@ -66,6 +66,7 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     await signOut();
+    navigate({ to: "/auth/login" });
   };
 
   const { data: sessions } = useModelQuery("AgentSession").useFindMany({
