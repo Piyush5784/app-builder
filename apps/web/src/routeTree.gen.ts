@@ -8,242 +8,242 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as AuthRouteRouteImport } from "./routes/auth/route";
-import { Route as DashboardRouteRouteImport } from "./routes/dashboard/route";
-import { Route as DashboardIndexRouteImport } from "./routes/dashboard/index";
-import { Route as AuthLoginIndexRouteImport } from "./routes/auth/login/index";
-import { Route as AuthRegisterIndexRouteImport } from "./routes/auth/register/index";
-import { Route as AuthResetPasswordIndexRouteImport } from "./routes/auth/reset-password/index";
-import { Route as DashboardBuildSessionIdRouteImport } from "./routes/dashboard/build/$sessionId";
-import { Route as DashboardSettingsIndexRouteImport } from "./routes/dashboard/settings/index";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteRouteImport } from './routes/auth/route'
+import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
+import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
+import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
+import { Route as DashboardBuildSessionIdRouteImport } from './routes/dashboard/build/$sessionId'
+import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard/settings/index'
 
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthRouteRoute = AuthRouteRouteImport.update({
-  id: "/auth",
-  path: "/auth",
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
-  id: "/dashboard",
-  path: "/dashboard",
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 const AuthLoginIndexRoute = AuthLoginIndexRouteImport.update({
-  id: "/login/",
-  path: "/login/",
+  id: '/login/',
+  path: '/login/',
   getParentRoute: () => AuthRouteRoute,
-} as any);
+} as any)
 const AuthRegisterIndexRoute = AuthRegisterIndexRouteImport.update({
-  id: "/register/",
-  path: "/register/",
+  id: '/register/',
+  path: '/register/',
   getParentRoute: () => AuthRouteRoute,
-} as any);
+} as any)
 const AuthResetPasswordIndexRoute = AuthResetPasswordIndexRouteImport.update({
-  id: "/reset-password/",
-  path: "/reset-password/",
+  id: '/reset-password/',
+  path: '/reset-password/',
   getParentRoute: () => AuthRouteRoute,
-} as any);
+} as any)
 const DashboardBuildSessionIdRoute = DashboardBuildSessionIdRouteImport.update({
-  id: "/build/$sessionId",
-  path: "/build/$sessionId",
+  id: '/build/$sessionId',
+  path: '/build/$sessionId',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
-  id: "/settings/",
-  path: "/settings/",
+  id: '/settings/',
+  path: '/settings/',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/auth": typeof AuthRouteRouteWithChildren;
-  "/dashboard": typeof DashboardRouteRouteWithChildren;
-  "/dashboard/": typeof DashboardIndexRoute;
-  "/dashboard/build/$sessionId": typeof DashboardBuildSessionIdRoute;
-  "/auth/login/": typeof AuthLoginIndexRoute;
-  "/auth/register/": typeof AuthRegisterIndexRoute;
-  "/auth/reset-password/": typeof AuthResetPasswordIndexRoute;
-  "/dashboard/settings/": typeof DashboardSettingsIndexRoute;
+  '/': typeof IndexRoute
+  '/auth': typeof AuthRouteRouteWithChildren
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
+  '/auth/login/': typeof AuthLoginIndexRoute
+  '/auth/register/': typeof AuthRegisterIndexRoute
+  '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
+  '/dashboard/settings/': typeof DashboardSettingsIndexRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/auth": typeof AuthRouteRouteWithChildren;
-  "/dashboard": typeof DashboardIndexRoute;
-  "/dashboard/build/$sessionId": typeof DashboardBuildSessionIdRoute;
-  "/auth/login": typeof AuthLoginIndexRoute;
-  "/auth/register": typeof AuthRegisterIndexRoute;
-  "/auth/reset-password": typeof AuthResetPasswordIndexRoute;
-  "/dashboard/settings": typeof DashboardSettingsIndexRoute;
+  '/': typeof IndexRoute
+  '/auth': typeof AuthRouteRouteWithChildren
+  '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
+  '/auth/login': typeof AuthLoginIndexRoute
+  '/auth/register': typeof AuthRegisterIndexRoute
+  '/auth/reset-password': typeof AuthResetPasswordIndexRoute
+  '/dashboard/settings': typeof DashboardSettingsIndexRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/auth": typeof AuthRouteRouteWithChildren;
-  "/dashboard": typeof DashboardRouteRouteWithChildren;
-  "/dashboard/": typeof DashboardIndexRoute;
-  "/dashboard/build/$sessionId": typeof DashboardBuildSessionIdRoute;
-  "/auth/login/": typeof AuthLoginIndexRoute;
-  "/auth/register/": typeof AuthRegisterIndexRoute;
-  "/auth/reset-password/": typeof AuthResetPasswordIndexRoute;
-  "/dashboard/settings/": typeof DashboardSettingsIndexRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/auth': typeof AuthRouteRouteWithChildren
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
+  '/auth/login/': typeof AuthLoginIndexRoute
+  '/auth/register/': typeof AuthRegisterIndexRoute
+  '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
+  '/dashboard/settings/': typeof DashboardSettingsIndexRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/auth"
-    | "/dashboard"
-    | "/dashboard/"
-    | "/dashboard/build/$sessionId"
-    | "/auth/login/"
-    | "/auth/register/"
-    | "/auth/reset-password/"
-    | "/dashboard/settings/";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/dashboard/'
+    | '/dashboard/build/$sessionId'
+    | '/auth/login/'
+    | '/auth/register/'
+    | '/auth/reset-password/'
+    | '/dashboard/settings/'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | "/auth"
-    | "/dashboard"
-    | "/dashboard/build/$sessionId"
-    | "/auth/login"
-    | "/auth/register"
-    | "/auth/reset-password"
-    | "/dashboard/settings";
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/dashboard/build/$sessionId'
+    | '/auth/login'
+    | '/auth/register'
+    | '/auth/reset-password'
+    | '/dashboard/settings'
   id:
-    | "__root__"
-    | "/"
-    | "/auth"
-    | "/dashboard"
-    | "/dashboard/"
-    | "/dashboard/build/$sessionId"
-    | "/auth/login/"
-    | "/auth/register/"
-    | "/auth/reset-password/"
-    | "/dashboard/settings/";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/dashboard/'
+    | '/dashboard/build/$sessionId'
+    | '/auth/login/'
+    | '/auth/register/'
+    | '/auth/reset-password/'
+    | '/dashboard/settings/'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  AuthRouteRoute: typeof AuthRouteRouteWithChildren;
-  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren;
+  IndexRoute: typeof IndexRoute
+  AuthRouteRoute: typeof AuthRouteRouteWithChildren
+  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/auth": {
-      id: "/auth";
-      path: "/auth";
-      fullPath: "/auth";
-      preLoaderRoute: typeof AuthRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/dashboard": {
-      id: "/dashboard";
-      path: "/dashboard";
-      fullPath: "/dashboard";
-      preLoaderRoute: typeof DashboardRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/dashboard/": {
-      id: "/dashboard/";
-      path: "/";
-      fullPath: "/dashboard/";
-      preLoaderRoute: typeof DashboardIndexRouteImport;
-      parentRoute: typeof DashboardRouteRoute;
-    };
-    "/auth/login/": {
-      id: "/auth/login/";
-      path: "/login";
-      fullPath: "/auth/login/";
-      preLoaderRoute: typeof AuthLoginIndexRouteImport;
-      parentRoute: typeof AuthRouteRoute;
-    };
-    "/auth/register/": {
-      id: "/auth/register/";
-      path: "/register";
-      fullPath: "/auth/register/";
-      preLoaderRoute: typeof AuthRegisterIndexRouteImport;
-      parentRoute: typeof AuthRouteRoute;
-    };
-    "/auth/reset-password/": {
-      id: "/auth/reset-password/";
-      path: "/reset-password";
-      fullPath: "/auth/reset-password/";
-      preLoaderRoute: typeof AuthResetPasswordIndexRouteImport;
-      parentRoute: typeof AuthRouteRoute;
-    };
-    "/dashboard/build/$sessionId": {
-      id: "/dashboard/build/$sessionId";
-      path: "/build/$sessionId";
-      fullPath: "/dashboard/build/$sessionId";
-      preLoaderRoute: typeof DashboardBuildSessionIdRouteImport;
-      parentRoute: typeof DashboardRouteRoute;
-    };
-    "/dashboard/settings/": {
-      id: "/dashboard/settings/";
-      path: "/settings";
-      fullPath: "/dashboard/settings/";
-      preLoaderRoute: typeof DashboardSettingsIndexRouteImport;
-      parentRoute: typeof DashboardRouteRoute;
-    };
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/auth/login/': {
+      id: '/auth/login/'
+      path: '/login'
+      fullPath: '/auth/login/'
+      preLoaderRoute: typeof AuthLoginIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/register/': {
+      id: '/auth/register/'
+      path: '/register'
+      fullPath: '/auth/register/'
+      preLoaderRoute: typeof AuthRegisterIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/reset-password/': {
+      id: '/auth/reset-password/'
+      path: '/reset-password'
+      fullPath: '/auth/reset-password/'
+      preLoaderRoute: typeof AuthResetPasswordIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/dashboard/build/$sessionId': {
+      id: '/dashboard/build/$sessionId'
+      path: '/build/$sessionId'
+      fullPath: '/dashboard/build/$sessionId'
+      preLoaderRoute: typeof DashboardBuildSessionIdRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/settings/': {
+      id: '/dashboard/settings/'
+      path: '/settings'
+      fullPath: '/dashboard/settings/'
+      preLoaderRoute: typeof DashboardSettingsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
   }
 }
 
 interface AuthRouteRouteChildren {
-  AuthLoginIndexRoute: typeof AuthLoginIndexRoute;
-  AuthRegisterIndexRoute: typeof AuthRegisterIndexRoute;
-  AuthResetPasswordIndexRoute: typeof AuthResetPasswordIndexRoute;
+  AuthLoginIndexRoute: typeof AuthLoginIndexRoute
+  AuthRegisterIndexRoute: typeof AuthRegisterIndexRoute
+  AuthResetPasswordIndexRoute: typeof AuthResetPasswordIndexRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthLoginIndexRoute: AuthLoginIndexRoute,
   AuthRegisterIndexRoute: AuthRegisterIndexRoute,
   AuthResetPasswordIndexRoute: AuthResetPasswordIndexRoute,
-};
+}
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
   AuthRouteRouteChildren,
-);
+)
 
 interface DashboardRouteRouteChildren {
-  DashboardIndexRoute: typeof DashboardIndexRoute;
-  DashboardBuildSessionIdRoute: typeof DashboardBuildSessionIdRoute;
-  DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute;
+  DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardBuildSessionIdRoute: typeof DashboardBuildSessionIdRoute
+  DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardBuildSessionIdRoute: DashboardBuildSessionIdRoute,
   DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
-};
+}
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
   DashboardRouteRouteChildren,
-);
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()

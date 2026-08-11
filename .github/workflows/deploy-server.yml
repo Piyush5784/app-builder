@@ -42,35 +42,38 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Push secrets to SSM Parameter Store
-        run: |
-          put() {
-            aws ssm put-parameter --cli-input-json "$(jq -n \
-              --arg name "/app-builder/production/$1" \
-              --arg value "$2" \
-              '{Name: $name, Value: $value, Type: "SecureString", Overwrite: true}')"
-          }
-          put PORT "3001"
-          put NODE_ENV "production"
-          put FRONTEND_URL "${{ vars.FRONTEND_URL }}"
-          put BETTER_AUTH_URL "${{ vars.BETTER_AUTH_URL }}"
-          put BETTER_AUTH_SECRET "${{ secrets.BETTER_AUTH_SECRET }}"
-          put DATABASE_URL "${{ secrets.DATABASE_URL }}"
-          put UPSTASH_REDIS_REST_URL "${{ secrets.UPSTASH_REDIS_REST_URL }}"
-          put UPSTASH_REDIS_REST_TOKEN "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}"
-          put GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}"
-          put GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}"
-          put GH_CLIENT_ID "${{ secrets.GH_CLIENT_ID }}"
-          put GH_CLIENT_SECRET "${{ secrets.GH_CLIENT_SECRET }}"
-          put RESEND_API_KEY "${{ secrets.RESEND_API_KEY }}"
-          put GEMINI_API_KEY "${{ secrets.GEMINI_API_KEY }}"
-          put NVIDIA_API_KEY "${{ secrets.NVIDIA_API_KEY }}"
-          put GROQ_API_KEY "${{ secrets.GROQ_API_KEY }}"
-          put OPENAI_API_KEY "${{ secrets.OPENAI_API_KEY }}"
-          put ANTHROPIC_API_KEY "${{ secrets.ANTHROPIC_API_KEY }}"
-          put E2B_API_KEY "${{ secrets.E2B_API_KEY }}"
-          put E2B_TEMPLATE_ID "${{ vars.E2B_TEMPLATE_ID }}"
-          put SANDBOX_TIMEOUT_MS "${{ vars.SANDBOX_TIMEOUT_MS }}"
+      # Only needed when a secret value actually changes — uncomment,
+      # run once, then comment out again. Skipped on normal deploys so
+      # every push doesn't rewrite all SSM parameters unnecessarily.
+      # - name: Push secrets to SSM Parameter Store
+      #   run: |
+      #     put() {
+      #       aws ssm put-parameter --cli-input-json "$(jq -n \
+      #         --arg name "/app-builder/production/$1" \
+      #         --arg value "$2" \
+      #         '{Name: $name, Value: $value, Type: "SecureString", Overwrite: true}')"
+      #     }
+      #     put PORT "3001"
+      #     put NODE_ENV "production"
+      #     put FRONTEND_URL "${{ vars.FRONTEND_URL }}"
+      #     put BETTER_AUTH_URL "${{ vars.BETTER_AUTH_URL }}"
+      #     put BETTER_AUTH_SECRET "${{ secrets.BETTER_AUTH_SECRET }}"
+      #     put DATABASE_URL "${{ secrets.DATABASE_URL }}"
+      #     put UPSTASH_REDIS_REST_URL "${{ secrets.UPSTASH_REDIS_REST_URL }}"
+      #     put UPSTASH_REDIS_REST_TOKEN "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}"
+      #     put GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}"
+      #     put GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}"
+      #     put GH_CLIENT_ID "${{ secrets.GH_CLIENT_ID }}"
+      #     put GH_CLIENT_SECRET "${{ secrets.GH_CLIENT_SECRET }}"
+      #     put RESEND_API_KEY "${{ secrets.RESEND_API_KEY }}"
+      #     put GEMINI_API_KEY "${{ secrets.GEMINI_API_KEY }}"
+      #     put NVIDIA_API_KEY "${{ secrets.NVIDIA_API_KEY }}"
+      #     put GROQ_API_KEY "${{ secrets.GROQ_API_KEY }}"
+      #     put OPENAI_API_KEY "${{ secrets.OPENAI_API_KEY }}"
+      #     put ANTHROPIC_API_KEY "${{ secrets.ANTHROPIC_API_KEY }}"
+      #     put E2B_API_KEY "${{ secrets.E2B_API_KEY }}"
+      #     put E2B_TEMPLATE_ID "${{ vars.E2B_TEMPLATE_ID }}"
+      #     put SANDBOX_TIMEOUT_MS "${{ vars.SANDBOX_TIMEOUT_MS }}"
 
       - name: Copy build to the instance
         uses: appleboy/scp-action@v0.1.7
