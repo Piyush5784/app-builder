@@ -28,6 +28,7 @@ temp.html
 e2b.toml
 
 routeTree.gen.ts
+apps/web/src/routeTree.gen.ts
 
 
 .wrangler

@@ -1,6 +1,12 @@
 import { Resend } from "resend";
+import { NODE_ENV } from "@/config";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+const FROM_ADDRESS =
+  NODE_ENV === "production"
+    ? "App Builder <noreply@web-builder.space>"
+    : "onboarding@resend.dev";
 
 interface SendEmailProps {
   to: string;
@@ -15,7 +21,7 @@ export async function sendEmail({ to, subject, html }: SendEmailProps) {
   }
 
   const { error } = await resend.emails.send({
-    from: "onboarding@resend.dev",
+    from: FROM_ADDRESS,
     to,
     subject,
     html,
