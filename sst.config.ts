@@ -81,7 +81,7 @@ export default $config({
 
           systemctl daemon-reload
           systemctl enable app-builder-server
-        `;  
+        `;
 
     const instance = new aws.ec2.Instance("app-builder-server", {
       ami: ubuntu.id,

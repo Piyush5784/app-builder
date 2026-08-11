@@ -14,7 +14,8 @@ import {
 // One provider per MODEL_REGISTRY entry (see agent/models.ts) — every model
 // is pinned to exactly one provider, so there's no separate configurable
 // "default provider" concept.
-export type ProviderName = "gemini" | "nvidia" | "groq" | "openai" | "anthropic";
+export type ProviderName =
+  "gemini" | "nvidia" | "groq" | "openai" | "anthropic";
 
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
