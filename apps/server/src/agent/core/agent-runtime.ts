@@ -1,8 +1,8 @@
-import type { Sandbox } from "e2b";
 import { SYSTEM_PROMPT } from "@/agent/core/prompt";
 import { providers } from "@/agent/providers";
 import { models, type ModelOption } from "@/agent/models";
-import { sandbox, SessionNotFoundError } from "@/agent/sandbox";
+import { sandbox } from "@/agent/sandbox";
+import { guardrails } from "@/agent/guardrails";
 import { toolsModule } from "@/agent/tools";
 import { context } from "@/agent/core/context";
 import { cancellation, type RunWatcher } from "@/agent/core/cancellation";
@@ -47,7 +47,9 @@ async function runLoop(
   sessionId: string,
   runId: string,
   userId: string,
-  sandboxHandle: Sandbox,
+  ensureSandbox: ReturnType<
+    typeof guardrails.createSandboxGuardrail
+  >["ensureSandbox"],
   provider: LLMProvider,
   tools: ToolSchema[],
   messages: ChatMessage[],
@@ -196,10 +198,8 @@ async function runLoop(
       });
 
       const toolStartedAt = Date.now();
-      const output = await toolsModule.executer.executeTool(
-        sandboxHandle,
-        call,
-      );
+      const { sandbox: liveSandbox } = await ensureSandbox();
+      const output = await toolsModule.executer.executeTool(liveSandbox, call);
       const durationMs = Date.now() - toolStartedAt;
 
       messages.push({
@@ -257,10 +257,13 @@ function truncateSessionName(name: string): string {
   return `${trimmed.slice(0, MAX_SESSION_NAME_LENGTH)}…`;
 }
 
-// Core Brain of the Agent: orchestrates the sandbox, LLM provider, and tool execution loop, handling errors and cancellations.
-// DB writes: AgentRun (create, then update with the result), AgentSession
-// (name set on a new session; upsert/refresh via sandbox.manager.openSandbox
-// — see that function's comment), plus whatever runLoop writes.
+// Core Brain of the Agent: orchestrates the session, LLM provider, and tool
+// execution loop, handling errors and cancellations. The sandbox itself is
+// opened lazily by the guardrail passed into runLoop, not here — a run
+// that never calls a real tool never creates one.
+// DB writes: AgentSession (created via ensureSessionExists on the very
+// first message, name set if new), AgentRun (create, then update with the
+// result), plus whatever runLoop and the guardrail write.
 export async function runAgent(
   sessionId: string,
   userPrompt: string,
@@ -280,52 +283,12 @@ export async function runAgent(
   let watcher: RunWatcher | undefined;
 
   try {
-    let sandboxResult: { sandbox: Sandbox; previewUrl: string };
-
-    try {
-      sandboxResult = await sandbox.manager.openSandbox(
-        sessionId,
-        isNewSession,
-        userId,
-      );
-    } catch (error) {
-      if (error instanceof SessionNotFoundError) {
-        throw error;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-
-      try {
-        // Records the run as failed so there's a trace that the agent never
-        // started, even though it never got a runId of its own.
-        await persistence.agentRuns.create({
-          data: {
-            sessionId,
-            provider: provider.providerLabel,
-            prompt: userPrompt,
-            status: "failed",
-            errorMessage: message,
-            finishedAt: new Date(),
-          },
-        });
-      } catch (persistError) {
-        telemetry.logger.error("agent", "failed to record failed run", {
-          error:
-            persistError instanceof Error
-              ? persistError.message
-              : String(persistError),
-        });
-      }
-      return {
-        sessionId,
-        reply:
-          "Could not restore this session's previous changes after the sandbox restarted. Please try again.",
-        previewUrl: "",
-      };
-    }
-
-    const { sandbox: liveSandbox, previewUrl } = sandboxResult;
-
-    emit({ type: "sandbox_ready", sessionId, previewUrl });
+    // The session row exists from the very first message, regardless of
+    // whether a sandbox ever gets created — a purely conversational run
+    // still needs somewhere to save its message history against (see
+    // ensureSessionExists's own comment).
+    await sandbox.manager.ensureSessionExists(sessionId, userId);
+    emit({ type: "session_ready", sessionId });
 
     if (isNewSession) {
       await persistence.agentSessions.updateMany({
@@ -343,6 +306,14 @@ export async function runAgent(
     const runId = run.id;
     watcher = cancellation.watchForCancellation(runId);
 
+    // Opens (or reconnects to) the sandbox lazily, the first time a tool
+    // call actually needs one — see agent/guardrails/sandbox-guardrail.ts.
+    const guardrail = guardrails.createSandboxGuardrail(
+      sessionId,
+      userId,
+      emit,
+    );
+
     let reply: string;
     let filesChanged: boolean;
 
@@ -351,7 +322,7 @@ export async function runAgent(
         sessionId,
         runId,
         userId,
-        liveSandbox,
+        guardrail.ensureSandbox,
         provider,
         toolsModule.schema.tools,
         messages,
@@ -384,7 +355,11 @@ export async function runAgent(
         },
       });
 
-      await sandbox.manager.destroySandbox(sessionId);
+      // Only a sandbox that actually got created needs tearing down — a
+      // run that failed before ever calling a tool never opened one.
+      if (guardrail.getState()) {
+        await sandbox.manager.destroySandbox(sessionId);
+      }
 
       throw error;
     }
@@ -400,24 +375,30 @@ export async function runAgent(
     });
 
     await context.saveHistory(sessionId, messages);
-    await sandbox.manager.updateSession(sessionId);
 
-    if (filesChanged) {
-      try {
-        await sandbox.manager.restartDevServer(liveSandbox);
-      } catch (error) {
-        // The run itself already succeeded — a failed restart just means the
-        // preview may still show stale content, not worth failing the run over.
-        telemetry.logger.error("sandbox", "dev server restart failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
+    const sandboxState = guardrail.getState();
+
+    if (sandboxState) {
+      await sandbox.manager.updateSession(sessionId);
+
+      if (filesChanged) {
+        try {
+          await sandbox.manager.restartDevServer(sandboxState.sandbox);
+        } catch (error) {
+          // The run itself already succeeded — a failed restart just means
+          // the preview may still show stale content, not worth failing
+          // the run over.
+          telemetry.logger.error("sandbox", "dev server restart failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
     }
 
     return {
       sessionId,
       reply,
-      previewUrl,
+      previewUrl: sandboxState?.previewUrl ?? "",
     };
   } finally {
     watcher?.stop();

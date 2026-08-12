@@ -1,6 +1,7 @@
 import type { ProviderName } from "@/agent/providers";
 import {
   NVIDIA_MODEL,
+  NVIDIA_LIGHTNING_MODEL,
   GEMINI_MODEL,
   GROQ_MODEL,
   OPENAI_MODEL,
@@ -22,7 +23,13 @@ const MODEL_REGISTRY: ModelOption[] = [
     id: "nvidia",
     provider: "nvidia",
     model: NVIDIA_MODEL,
-    label: "NVIDIA Nemotron",
+    label: "NVIDIA Nemotron Ultra",
+  },
+  {
+    id: "nvidia-lightning",
+    provider: "nvidiaLightning",
+    model: NVIDIA_LIGHTNING_MODEL,
+    label: "NVIDIA Nemotron Lightning",
   },
   {
     id: "gemini",

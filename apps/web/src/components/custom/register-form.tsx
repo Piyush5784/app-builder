@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -11,6 +12,7 @@ import {
   FormMessage,
 } from "@/components/custom/form";
 import { Button } from "@package/ui/components/button";
+import { Spinner } from "@package/ui/components/spinner";
 import { FcGoogle } from "react-icons/fc";
 // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
 // import { FaGithub } from "react-icons/fa";
@@ -55,12 +57,21 @@ export default function RegisterForm({
   });
 
   const { mutate, isPending } = useRegister();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const isBusy = isPending || isGoogleLoading;
 
   async function loginWithGoogle() {
-    await signIn.social({
-      provider: "google",
-      callbackURL: `${FRONTEND_URL}/dashboard`,
-    });
+    setIsGoogleLoading(true);
+    try {
+      await signIn.social({
+        provider: "google",
+        callbackURL: `${FRONTEND_URL}/dashboard`,
+      });
+    } finally {
+      // Only reached if the redirect never happened (blocked popup, network
+      // error) — a successful flow navigates away before this runs.
+      setIsGoogleLoading(false);
+    }
   }
 
   // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
@@ -97,9 +108,9 @@ export default function RegisterForm({
                     variant="outline"
                     onClick={loginWithGoogle}
                     type="button"
-                    disabled={isPending}
+                    disabled={isBusy}
                   >
-                    <FcGoogle />
+                    {isGoogleLoading ? <Spinner /> : <FcGoogle />}
                     Sign up with Google
                   </Button>
                   {/* Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET. */}
@@ -107,7 +118,7 @@ export default function RegisterForm({
                     variant="outline"
                     onClick={loginWithGithub}
                     type="button"
-                    disabled={isPending}
+                    disabled={isBusy}
                   >
                     <FaGithub />
                     Sign up with GitHub
@@ -130,6 +141,7 @@ export default function RegisterForm({
                             type="email"
                             placeholder="m@example.com"
                             autoComplete="email"
+                            disabled={isBusy}
                             {...field}
                           />
                         </FormControl>
@@ -151,6 +163,7 @@ export default function RegisterForm({
                             type="text"
                             placeholder="John Doe"
                             autoComplete="name"
+                            disabled={isBusy}
                             {...field}
                           />
                         </FormControl>
@@ -171,6 +184,7 @@ export default function RegisterForm({
                             id="password"
                             placeholder="******"
                             autoComplete="new-password"
+                            disabled={isBusy}
                             {...field}
                           />
                         </FormControl>
@@ -193,6 +207,7 @@ export default function RegisterForm({
                             id="confirmPassword"
                             placeholder="******"
                             autoComplete="new-password"
+                            disabled={isBusy}
                             {...field}
                           />
                         </FormControl>
@@ -202,8 +217,8 @@ export default function RegisterForm({
                   )}
                 />
                 <Field>
-                  <Button type="submit" disabled={isPending} className="w-full">
-                    {isPending ? "Registering..." : "Register"}
+                  <Button type="submit" disabled={isBusy} className="w-full">
+                    {isPending ? <Spinner /> : "Register"}
                   </Button>
                   <FieldDescription className="text-center">
                     Already have an account?{" "}

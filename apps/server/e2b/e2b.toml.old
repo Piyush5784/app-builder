@@ -1,0 +1,17 @@
+# This is a config for E2B sandbox template.
+# You can use template ID (2ek5ke2cdckpakzoqcc4) or template name (lovable-v1-react-ts) to create a sandbox:
+
+# Python SDK
+# from e2b import Sandbox, AsyncSandbox
+# sandbox = Sandbox.create("lovable-v1-react-ts") # Sync sandbox
+# sandbox = await AsyncSandbox.create("lovable-v1-react-ts") # Async sandbox
+
+# JS SDK
+# import { Sandbox } from 'e2b'
+# const sandbox = await Sandbox.create('lovable-v1-react-ts')
+
+team_id = "c5bd3a20-3d08-4ad4-96a8-3135ed4eca55"
+start_cmd = "cd /home/user/app && npm run dev"
+dockerfile = "e2b.Dockerfile"
+template_name = "lovable-v1-react-ts"
+template_id = "2ek5ke2cdckpakzoqcc4"

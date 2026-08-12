@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { agent } from "@/agent";
+import { SandboxNotCreatedError } from "@/agent/sandbox";
 import { ApiError, asyncHandler } from "@/middleware/error-handler";
 import { normalLimiter } from "@/middleware/rate-limit";
 import { createSuccessResponse } from "@/types/api-response";
@@ -9,6 +10,12 @@ const sandboxRouter = Router();
 
 // Reopens a session's sandbox (replaying its recorded changes if the old one
 // died) and returns its preview URL. No LLM call — just the sandbox.
+//
+// A session that's only ever been chatted in has no sandbox yet — that's
+// expected, ordinary state, not a failure, so it's a normal 200 with
+// previewUrl: null rather than a 404. SessionNotFoundError (session
+// doesn't exist / isn't owned by this user) is the real error case and
+// still propagates to asyncHandler's .catch(next) as a 404.
 sandboxRouter.get(
   "/sandbox/:sessionId",
   normalLimiter,
@@ -16,8 +23,18 @@ sandboxRouter.get(
     const sessionId = requireSessionIdParam(req.params.sessionId);
     const userId = requireUserId(req);
 
-    const result = await agent.core.getSandboxUrl(sessionId, userId);
-    res.status(200).json(createSuccessResponse(result));
+    try {
+      const result = await agent.core.getSandboxUrl(sessionId, userId);
+      res.status(200).json(createSuccessResponse(result));
+    } catch (error) {
+      if (error instanceof SandboxNotCreatedError) {
+        res
+          .status(200)
+          .json(createSuccessResponse({ sessionId, previewUrl: null }));
+        return;
+      }
+      throw error;
+    }
   }),
 );
 

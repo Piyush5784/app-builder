@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
+import { Route as SandboxPreviewRouteImport } from './routes/sandbox-preview'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
@@ -32,6 +33,11 @@ const AuthRouteRoute = AuthRouteRouteImport.update({
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SandboxPreviewRoute = SandboxPreviewRouteImport.update({
+  id: '/sandbox-preview',
+  path: '/sandbox-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/sandbox-preview': typeof SandboxPreviewRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
+  '/sandbox-preview': typeof SandboxPreviewRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
   '/auth/login': typeof AuthLoginIndexRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/sandbox-preview': typeof SandboxPreviewRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/build/$sessionId': typeof DashboardBuildSessionIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/sandbox-preview'
     | '/dashboard/'
     | '/dashboard/build/$sessionId'
     | '/auth/login/'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/sandbox-preview'
     | '/dashboard'
     | '/dashboard/build/$sessionId'
     | '/auth/login'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/sandbox-preview'
     | '/dashboard/'
     | '/dashboard/build/$sessionId'
     | '/auth/login/'
@@ -137,6 +149,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  SandboxPreviewRoute: typeof SandboxPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -160,6 +173,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sandbox-preview': {
+      id: '/sandbox-preview'
+      path: '/sandbox-preview'
+      fullPath: '/sandbox-preview'
+      preLoaderRoute: typeof SandboxPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  SandboxPreviewRoute: SandboxPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

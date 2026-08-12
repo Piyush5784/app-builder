@@ -133,6 +133,8 @@ export function useSandboxQuery(sessionId: string, enabled = true) {
   return useQuery({
     queryKey: ["agent-sandbox", sessionId],
     queryFn: async () => {
+      // A session with no sandbox yet (still chat-only) is a normal 200
+      // with previewUrl: null here, not an error — see sandbox.routes.ts.
       const res = await api.get<{ data: SandboxResponse }>(
         `/agent/sandbox/${sessionId}`,
       );
@@ -144,7 +146,8 @@ export function useSandboxQuery(sessionId: string, enabled = true) {
 
 // Sends the prompt and reads the whole run's events off that one request.
 // `sessionId` is optional — a brand-new session doesn't have one yet, the
-// server generates it and reports it back on "sandbox_ready".
+// server generates it and reports it back on "session_ready" (fires
+// immediately, regardless of whether the run ever needs a sandbox).
 //
 // Plain fetch, no useMutation/QueryClient — a request/response mutation
 // abstraction doesn't fit a long-lived SSE stream well here.
@@ -225,6 +228,13 @@ export function useAgentEventHandler(
   return React.useCallback(
     (event: AgentEvent) => {
       switch (event.type) {
+        case "session_ready": {
+          // No item-list effect here — session identity/navigation is
+          // handled by the route component itself (see $sessionId.tsx),
+          // since it also needs to know whether to reset local state for
+          // a genuinely different session vs. a self-assigned one.
+          break;
+        }
         case "sandbox_ready": {
           queryClient.invalidateQueries({
             queryKey: ["agent-sandbox", event.sessionId],
