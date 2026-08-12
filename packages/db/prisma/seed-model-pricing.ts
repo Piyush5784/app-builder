@@ -21,6 +21,12 @@ const PRICES: {
     outputPricePerMillion: 1.8,
   },
   {
+    provider: "nvidiaLightning",
+    model: "nvidia/nemotron-3.5-lightning-30b-a3b",
+    inputPricePerMillion: 0,
+    outputPricePerMillion: 0,
+  },
+  {
     provider: "gemini",
     model: "gemini-2.0-flash-exp",
     inputPricePerMillion: 0.1,

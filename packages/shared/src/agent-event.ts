@@ -1,6 +1,7 @@
 import type { ToolName } from "./tool-name";
 
 export type AgentEvent =
+  | { type: "session_ready"; sessionId: string }
   | { type: "sandbox_ready"; sessionId: string; previewUrl: string }
   | { type: "token"; delta: string }
   | { type: "step_start"; step: number }

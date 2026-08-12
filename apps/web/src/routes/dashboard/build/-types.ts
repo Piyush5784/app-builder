@@ -1,7 +1,9 @@
 import type { ToolName } from "@package/shared";
 
 export interface SandboxResponse {
-  previewUrl: string;
+  // null when this session has no sandbox yet (still chat-only) — that's
+  // a normal, expected state, not an error (see sandbox.routes.ts).
+  previewUrl: string | null;
 }
 
 export interface ModelInfo {

@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from "@/components/custom/form";
 import { Button } from "@package/ui/components/button";
+import { Spinner } from "@package/ui/components/spinner";
 import { FcGoogle } from "react-icons/fc";
 // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
 // import { FaGithub } from "react-icons/fa";
@@ -117,9 +118,11 @@ export default function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const [step, setStep] = useState<Step>("password");
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { mutate, isPending } = useLogin();
   const requestPasswordResetMutation = useRequestPasswordReset();
   const magicLinkSignInMutation = useMagicLinkSignIn();
+  const isBusy = isPending || isGoogleLoading;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -130,10 +133,17 @@ export default function LoginForm({
     },
   });
   async function LoginWithGoogle() {
-    await signIn.social({
-      provider: "google",
-      callbackURL: `${FRONTEND_URL}/dashboard`,
-    });
+    setIsGoogleLoading(true);
+    try {
+      await signIn.social({
+        provider: "google",
+        callbackURL: `${FRONTEND_URL}/dashboard`,
+      });
+    } finally {
+      // Only reached if the redirect never happened (blocked popup, network
+      // error) — a successful flow navigates away before this runs.
+      setIsGoogleLoading(false);
+    }
   }
 
   // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
@@ -216,9 +226,9 @@ export default function LoginForm({
                     variant="outline"
                     onClick={LoginWithGoogle}
                     type="button"
-                    disabled={isPending}
+                    disabled={isBusy}
                   >
-                    <FcGoogle />
+                    {isGoogleLoading ? <Spinner /> : <FcGoogle />}
                     Login with Google
                   </Button>
                   {/* Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET. */}
@@ -248,6 +258,7 @@ export default function LoginForm({
                             type="email"
                             placeholder="m@example.com"
                             autoComplete="email"
+                            disabled={isBusy}
                             {...field}
                           />
                         </FormControl>
@@ -277,6 +288,7 @@ export default function LoginForm({
                             id="password"
                             placeholder="******"
                             autoComplete="password"
+                            disabled={isBusy}
                             {...field}
                           />
                         </FormControl>
@@ -286,12 +298,8 @@ export default function LoginForm({
                   )}
                 />
                 <Field>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    // disabled={isLoading}
-                  >
-                    Login
+                  <Button type="submit" className="w-full" disabled={isBusy}>
+                    {isPending ? <Spinner /> : "Login"}
                   </Button>
                   <FieldDescription className="text-center">
                     <button

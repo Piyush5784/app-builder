@@ -1,0 +1,38 @@
+FROM e2bdev/code-interpreter:latest
+
+WORKDIR /home/user/app
+
+RUN npm create vite@latest . -- --template react-ts && \
+    npm install
+
+# Tailwind CSS v4 — CSS-first config (no tailwind.config.js), plugin-based
+# Vite integration, same convention as this monorepo's own packages/ui.
+RUN npm install -D tailwindcss @tailwindcss/vite
+
+RUN cat <<'EOF' > vite.config.ts
+import path from "path";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    host: true,
+    allowedHosts: true,
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+});
+EOF
+
+RUN echo '@import "tailwindcss";' > src/index.css
+
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
+
+RUN bunx --bun shadcn@latest init -y
+RUN bunx --bun shadcn@latest add --all -y

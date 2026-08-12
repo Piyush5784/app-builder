@@ -94,8 +94,10 @@ const streamdownPlugins = { cjk, code, math, mermaid };
 // Every model is billed on usage, so all of them show disabled once credits
 // run out — the backend is the real gate (see agent-runtime.ts), this is
 // just so the picker doesn't offer an option that would immediately fail.
-// Only nvidia is enabled for now — the other providers are registered but
-// not yet offered to users.
+// Only the two NVIDIA options are enabled for now — the other providers are
+// registered but not yet offered to users.
+const ENABLED_MODEL_IDS = new Set(["nvidia", "nvidia-lightning"]);
+
 function ModelPicker({
   models,
   value,
@@ -129,13 +131,153 @@ function ModelPicker({
           <SelectItem
             key={model.id}
             value={model.id}
-            disabled={credits <= 0 || model.id !== "nvidia"}
+            disabled={credits <= 0 || !ENABLED_MODEL_IDS.has(model.id)}
           >
             {model.label}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+// The message list + input box, shared between the chat-only layout (no
+// sandbox yet) and the left pane of the full preview/code workspace (once
+// one exists) — same chat, just a different amount of screen around it.
+function ChatPanel({
+  items,
+  isGenerating,
+  prompt,
+  setPrompt,
+  handleSend,
+  cancelGeneration,
+  modelsQuery,
+  selectedModelId,
+  setSelectedModelId,
+  credits,
+}: {
+  items: ChatItem[];
+  isGenerating: boolean;
+  prompt: string;
+  setPrompt: (value: string) => void;
+  handleSend: () => void;
+  cancelGeneration: { mutate: () => void; isPending: boolean };
+  modelsQuery: { data: ModelInfo[] | undefined };
+  selectedModelId: string;
+  setSelectedModelId: (id: string) => void;
+  credits: number;
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <MessageScrollerProvider autoScroll defaultScrollPosition="end">
+        <MessageScroller className="min-h-0 flex-1">
+          <MessageScrollerViewport>
+            <MessageScrollerContent className="px-4 py-4">
+              {items.map((item) => {
+                if (item.kind === "activity") {
+                  return (
+                    <MessageScrollerItem key={item.id}>
+                      <ActivityRow activity={item.activity} />
+                    </MessageScrollerItem>
+                  );
+                }
+                return (
+                  <MessageScrollerItem key={item.id}>
+                    <Message align={item.kind === "user" ? "end" : "start"}>
+                      <MessageContent>
+                        <Bubble
+                          align={item.kind === "user" ? "end" : "start"}
+                          variant={
+                            item.kind === "user"
+                              ? "default"
+                              : item.kind === "error"
+                                ? "destructive"
+                                : "muted"
+                          }
+                        >
+                          <BubbleContent>
+                            {item.kind === "assistant" ? (
+                              <Streamdown
+                                mode="static"
+                                plugins={streamdownPlugins}
+                              >
+                                {item.content}
+                              </Streamdown>
+                            ) : (
+                              item.content
+                            )}
+                          </BubbleContent>
+                        </Bubble>
+                      </MessageContent>
+                    </Message>
+                  </MessageScrollerItem>
+                );
+              })}
+              {isGenerating && (
+                <MessageScrollerItem>
+                  <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                    <Spinner className="size-3.5" /> Thinking...
+                  </div>
+                </MessageScrollerItem>
+              )}
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+          <MessageScrollerButton />
+        </MessageScroller>
+      </MessageScrollerProvider>
+
+      <div className="border-t border-border p-3">
+        <div className="relative">
+          <Textarea
+            placeholder="Ask for a change..."
+            value={prompt}
+            disabled={isGenerating}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+              if (e.key === "Escape" && isGenerating) {
+                cancelGeneration.mutate();
+              }
+            }}
+            className="min-h-20 resize-none pr-12 pb-9 text-sm"
+          />
+          {modelsQuery.data && (
+            <div className="absolute bottom-2 left-2">
+              <ModelPicker
+                models={modelsQuery.data}
+                value={selectedModelId}
+                onChange={setSelectedModelId}
+                credits={credits}
+                disabled={isGenerating}
+              />
+            </div>
+          )}
+          {isGenerating ? (
+            <Button
+              size="icon-sm"
+              className="absolute right-2 bottom-2"
+              disabled={cancelGeneration.isPending}
+              onClick={() => cancelGeneration.mutate()}
+              title="Stop generating (Esc)"
+            >
+              <SquareIcon className="fill-current" />
+            </Button>
+          ) : (
+            <Button
+              size="icon-sm"
+              className="absolute right-2 bottom-2"
+              disabled={!prompt.trim()}
+              onClick={handleSend}
+            >
+              <ArrowUpIcon />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -160,6 +302,7 @@ function BuildWorkspace() {
   );
   const [prevSessionId, setPrevSessionId] = React.useState(sessionId);
   const [skipDbSeed, setSkipDbSeed] = React.useState(isNew);
+  const [hasSandbox, setHasSandbox] = React.useState(false);
 
   if (sessionId !== prevSessionId) {
     const selfAssigned = sessionId === selfAssignedId;
@@ -169,6 +312,7 @@ function BuildWorkspace() {
       setItems([]);
       setIsGenerating(false);
       setPrompt("");
+      setHasSandbox(false);
     }
     setSkipDbSeed(selfAssigned || sessionId === "new");
   }
@@ -209,7 +353,11 @@ function BuildWorkspace() {
 
   const handleAgentEvent = React.useCallback(
     (event: AgentEvent) => {
-      if (event.type === "sandbox_ready" && isNew) {
+      // session_ready carries the real sessionId as soon as it's known —
+      // before any tool call, before it's decided whether a sandbox will
+      // ever be needed — so a brand-new session adopts its id (and the
+      // sidebar picks it up) even for a purely conversational first turn.
+      if (event.type === "session_ready" && isNew) {
         invalidateQueriesForTable("AgentSession");
         setSelfAssignedId(event.sessionId);
         navigate({
@@ -217,6 +365,12 @@ function BuildWorkspace() {
           params: { sessionId: event.sessionId },
           replace: true,
         });
+      }
+      // sandbox_ready only fires once a tool call actually needs a live
+      // sandbox — this is what flips the UI from chat-only into the full
+      // preview/code workspace.
+      if (event.type === "sandbox_ready") {
+        setHasSandbox(true);
       }
       if (event.type === "error" && isNew) {
         toast.error(event.message);
@@ -261,6 +415,11 @@ function BuildWorkspace() {
   };
 
   const previewUrl = sandbox.data?.previewUrl;
+  // Gates chat-only vs full workspace. `hasSandbox` is the this-stream
+  // signal (set the moment sandbox_ready fires); OR'd with the query's own
+  // data so a resumed session that already has a sandbox renders the full
+  // workspace immediately, without waiting for a fresh sandbox_ready event.
+  const sandboxExists = hasSandbox || Boolean(previewUrl);
 
   if (isNew) {
     return (
@@ -331,6 +490,28 @@ function BuildWorkspace() {
     );
   }
 
+  // No sandbox yet — the model hasn't called a tool that needed one, so
+  // there's nothing to preview or browse. Plain chat, full width, instead
+  // of reserving space for a workspace that doesn't exist.
+  if (!sandboxExists) {
+    return (
+      <div className="mx-auto h-full max-w-2xl">
+        <ChatPanel
+          items={items}
+          isGenerating={isGenerating}
+          prompt={prompt}
+          setPrompt={setPrompt}
+          handleSend={handleSend}
+          cancelGeneration={cancelGeneration}
+          modelsQuery={modelsQuery}
+          selectedModelId={selectedModelId}
+          setSelectedModelId={setSelectedModelId}
+          credits={credits}
+        />
+      </div>
+    );
+  }
+
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
       <ResizablePanel
@@ -339,114 +520,18 @@ function BuildWorkspace() {
         maxSize="45"
         className="flex h-full min-h-0 flex-col overflow-hidden"
       >
-        <MessageScrollerProvider autoScroll defaultScrollPosition="end">
-          <MessageScroller className="min-h-0 flex-1">
-            <MessageScrollerViewport>
-              <MessageScrollerContent className="px-4 py-4">
-                {items.map((item) => {
-                  if (item.kind === "activity") {
-                    return (
-                      <MessageScrollerItem key={item.id}>
-                        <ActivityRow activity={item.activity} />
-                      </MessageScrollerItem>
-                    );
-                  }
-                  return (
-                    <MessageScrollerItem key={item.id}>
-                      <Message align={item.kind === "user" ? "end" : "start"}>
-                        <MessageContent>
-                          <Bubble
-                            align={item.kind === "user" ? "end" : "start"}
-                            variant={
-                              item.kind === "user"
-                                ? "default"
-                                : item.kind === "error"
-                                  ? "destructive"
-                                  : "muted"
-                            }
-                          >
-                            <BubbleContent>
-                              {item.kind === "assistant" ? (
-                                <Streamdown
-                                  mode="static"
-                                  plugins={streamdownPlugins}
-                                >
-                                  {item.content}
-                                </Streamdown>
-                              ) : (
-                                item.content
-                              )}
-                            </BubbleContent>
-                          </Bubble>
-                        </MessageContent>
-                      </Message>
-                    </MessageScrollerItem>
-                  );
-                })}
-                {isGenerating && (
-                  <MessageScrollerItem>
-                    <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-                      <Spinner className="size-3.5" /> Thinking...
-                    </div>
-                  </MessageScrollerItem>
-                )}
-              </MessageScrollerContent>
-            </MessageScrollerViewport>
-            <MessageScrollerButton />
-          </MessageScroller>
-        </MessageScrollerProvider>
-
-        <div className="border-t border-border p-3">
-          <div className="relative">
-            <Textarea
-              placeholder="Ask for a change..."
-              value={prompt}
-              disabled={isGenerating}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-                if (e.key === "Escape" && isGenerating) {
-                  cancelGeneration.mutate();
-                }
-              }}
-              className="min-h-20 resize-none pr-12 pb-9 text-sm"
-            />
-            {modelsQuery.data && (
-              <div className="absolute bottom-2 left-2">
-                <ModelPicker
-                  models={modelsQuery.data}
-                  value={selectedModelId}
-                  onChange={setSelectedModelId}
-                  credits={credits}
-                  disabled={isGenerating}
-                />
-              </div>
-            )}
-            {isGenerating ? (
-              <Button
-                size="icon-sm"
-                className="absolute right-2 bottom-2"
-                disabled={cancelGeneration.isPending}
-                onClick={() => cancelGeneration.mutate()}
-                title="Stop generating (Esc)"
-              >
-                <SquareIcon className="fill-current" />
-              </Button>
-            ) : (
-              <Button
-                size="icon-sm"
-                className="absolute right-2 bottom-2"
-                disabled={!prompt.trim()}
-                onClick={handleSend}
-              >
-                <ArrowUpIcon />
-              </Button>
-            )}
-          </div>
-        </div>
+        <ChatPanel
+          items={items}
+          isGenerating={isGenerating}
+          prompt={prompt}
+          setPrompt={setPrompt}
+          handleSend={handleSend}
+          cancelGeneration={cancelGeneration}
+          modelsQuery={modelsQuery}
+          selectedModelId={selectedModelId}
+          setSelectedModelId={setSelectedModelId}
+          credits={credits}
+        />
       </ResizablePanel>
 
       <ResizableHandle withHandle />
@@ -508,7 +593,13 @@ function BuildWorkspace() {
               className=" "
               disabled={!previewUrl}
               nativeButton={false}
-              render={<a href={previewUrl} target="_blank" rel="noreferrer" />}
+              render={
+                <a
+                  href={previewUrl ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
             >
               <ExternalLinkIcon />
             </Button>

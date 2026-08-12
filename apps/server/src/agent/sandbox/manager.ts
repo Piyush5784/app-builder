@@ -16,6 +16,18 @@ export class SessionNotFoundError extends Error {
   }
 }
 
+// Thrown by getOrCreateSandbox(sessionId, allowCreate: false, ...) when the
+// session is real but has never had a sandbox — e.g. a session that's only
+// ever been chatted in, never asked to build anything. Distinct from
+// SessionNotFoundError (which means the session itself doesn't exist/isn't
+// owned by this user) so callers/logs can tell the two apart.
+export class SandboxNotCreatedError extends Error {
+  constructor(sessionId: string) {
+    super(`Session ${sessionId} has no sandbox yet`);
+    this.name = "SandboxNotCreatedError";
+  }
+}
+
 export interface SandboxHandle {
   sandbox: Sandbox;
   isNew: boolean;
@@ -54,12 +66,17 @@ async function getOrCreateSandbox(
   if (existing === null && !allowCreate) {
     throw new SessionNotFoundError(sessionId);
   }
+  // A real session that's only ever been chatted in has no sandboxId yet —
+  // distinct from "session doesn't exist", see SandboxNotCreatedError.
+  if (existing !== null && existing.sandboxId === null && !allowCreate) {
+    throw new SandboxNotCreatedError(sessionId);
+  }
 
   const isExpired =
     existing !== null &&
     Date.now() - existing.lastActiveAt.getTime() > SANDBOX_TIMEOUT_MS;
 
-  if (existing !== null && !isExpired) {
+  if (existing !== null && existing.sandboxId !== null && !isExpired) {
     try {
       const sandbox = await Sandbox.connect(existing.sandboxId);
       await sandbox.setTimeout(SANDBOX_TIMEOUT_MS);
@@ -85,6 +102,24 @@ async function getOrCreateSandbox(
   });
 
   return { sandbox: newSandbox, isNew: true };
+}
+
+// Creates the session's row up front, before it's known whether this run
+// will ever touch a sandbox — lets a purely conversational message ("how
+// are you?") still get a durable session + message history, instead of
+// requiring a sandbox to exist just to have somewhere to save the chat.
+// No-ops if the row already exists; never touches sandboxId either way.
+//
+// DB writes: AgentSession — upsert (create only, update is a no-op).
+async function ensureSessionExists(
+  sessionId: string,
+  userId: string,
+): Promise<void> {
+  await persistence.agentSessions.upsert({
+    where: { id: sessionId },
+    create: { id: sessionId, userId },
+    update: {},
+  });
 }
 
 function getPreviewUrl(sandbox: Sandbox): string {
@@ -134,7 +169,7 @@ async function destroySandbox(sessionId: string): Promise<void> {
     where: { id: sessionId },
     select: { sandboxId: true },
   });
-  if (!existing) return;
+  if (!existing || existing.sandboxId === null) return;
 
   try {
     await Sandbox.kill(existing.sandboxId);
@@ -275,6 +310,7 @@ async function downloadSandboxZip(
 
 export const manager = {
   getOrCreateSandbox,
+  ensureSessionExists,
   getPreviewUrl,
   updateSession,
   restartDevServer,

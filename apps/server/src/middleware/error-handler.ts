@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { createErrorResponse } from "@/types/api-response";
-import { SessionNotFoundError } from "@/agent/sandbox";
+import { SessionNotFoundError, SandboxNotCreatedError } from "@/agent/sandbox";
 import { InsufficientCreditsError } from "@/agent/core/agent-runtime";
 
 export class ApiError extends Error {
@@ -18,6 +18,7 @@ export class ApiError extends Error {
 // .catch(next).
 const domainErrorStatus = new Map<new (...args: never[]) => Error, number>([
   [SessionNotFoundError, 404],
+  [SandboxNotCreatedError, 404],
   [InsufficientCreditsError, 402],
 ]);
 
