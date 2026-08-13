@@ -132,15 +132,9 @@ function LinkedAccountsCard() {
                       ? undefined
                       : "Set a password or link another account first, so you don't lock yourself out"
                   }
-                  onClick={() =>
-                    unlinkAccountMutation.mutate(provider.id)
-                  }
+                  onClick={() => unlinkAccountMutation.mutate(provider.id)}
                 >
-                  {unlinkAccountMutation.isPending ? (
-                    <Spinner />
-                  ) : (
-                    "Disconnect"
-                  )}
+                  {unlinkAccountMutation.isPending ? <Spinner /> : "Disconnect"}
                 </Button>
               ) : (
                 <Button
