@@ -282,7 +282,6 @@ const DotField = memo(
         window.removeEventListener("resize", resize);
         window.removeEventListener("mousemove", onMouseMove);
       };
-       
     }, []);
 
     useEffect(() => {

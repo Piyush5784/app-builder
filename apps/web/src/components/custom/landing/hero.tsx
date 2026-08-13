@@ -25,7 +25,10 @@ export function Hero() {
           style, not className — their own bundled .css sets `position:
           relative` on the same class Tailwind's `absolute` targets, and
           that stylesheet wins the cascade over the utility class. */}
-      <div className="absolute inset-0 -z-10" style={{ position: "absolute", inset: 0 }}>
+      <div
+        className="absolute inset-0 -z-10"
+        style={{ position: "absolute", inset: 0 }}
+      >
         <div style={{ position: "absolute", inset: 0 }}>
           <DotField
             dotRadius={1.5}
