@@ -13,6 +13,14 @@ import {
 } from "@/components/custom/form";
 import { Button } from "@package/ui/components/button";
 import { Spinner } from "@package/ui/components/spinner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@package/ui/components/dialog";
 import { FcGoogle } from "react-icons/fc";
 // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
 // import { FaGithub } from "react-icons/fa";
@@ -34,7 +42,7 @@ import { Input } from "@package/ui/components/input";
 import { PasswordInput } from "@/components/custom/password-input";
 
 import { registerFormSchema } from "@/lib/validation-schemas";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useRegister } from "@/hooks/use-user";
 import { signIn } from "@/lib/auth-client";
 import { FRONTEND_URL } from "@/config";
@@ -56,8 +64,10 @@ export default function RegisterForm({
     },
   });
 
+  const navigate = useNavigate();
   const { mutate, isPending } = useRegister();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [verifyEmailFor, setVerifyEmailFor] = useState<string | null>(null);
   const isBusy = isPending || isGoogleLoading;
 
   async function loginWithGoogle() {
@@ -83,11 +93,14 @@ export default function RegisterForm({
   // }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    mutate({
-      email: values.email,
-      name: values.username,
-      password: values.password,
-    });
+    mutate(
+      {
+        email: values.email,
+        name: values.username,
+        password: values.password,
+      },
+      { onSuccess: () => setVerifyEmailFor(values.email) },
+    );
   }
 
   return (
@@ -243,6 +256,29 @@ export default function RegisterForm({
         </Link>
         .
       </FieldDescription>
+
+      <Dialog
+        open={verifyEmailFor !== null}
+        onOpenChange={(open) => {
+          if (!open) navigate({ to: "/auth/login" });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Check your email</DialogTitle>
+            <DialogDescription>
+              We sent a verification link to {verifyEmailFor}. Click it to
+              activate your account — if you don't see it in a few minutes,
+              check your spam or junk folder.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => navigate({ to: "/auth/login" })}>
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
