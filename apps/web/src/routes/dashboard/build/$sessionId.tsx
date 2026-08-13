@@ -87,15 +87,8 @@ const EXAMPLE_PROMPTS = [
   "A dashboard with a sidebar and a table of recent orders",
 ];
 
-// Stable reference so Streamdown doesn't see a new plugins object every
-// render.
 const streamdownPlugins = { cjk, code, math, mermaid };
 
-// Every model is billed on usage, so all of them show disabled once credits
-// run out — the backend is the real gate (see agent-runtime.ts), this is
-// just so the picker doesn't offer an option that would immediately fail.
-// Only the two NVIDIA options are enabled for now — the other providers are
-// registered but not yet offered to users.
 const ENABLED_MODEL_IDS = new Set(["nvidia", "nvidia-lightning"]);
 
 function ModelPicker({
@@ -353,10 +346,6 @@ function BuildWorkspace() {
 
   const handleAgentEvent = React.useCallback(
     (event: AgentEvent) => {
-      // session_ready carries the real sessionId as soon as it's known —
-      // before any tool call, before it's decided whether a sandbox will
-      // ever be needed — so a brand-new session adopts its id (and the
-      // sidebar picks it up) even for a purely conversational first turn.
       if (event.type === "session_ready" && isNew) {
         invalidateQueriesForTable("AgentSession");
         setSelfAssignedId(event.sessionId);
@@ -366,9 +355,6 @@ function BuildWorkspace() {
           replace: true,
         });
       }
-      // sandbox_ready only fires once a tool call actually needs a live
-      // sandbox — this is what flips the UI from chat-only into the full
-      // preview/code workspace.
       if (event.type === "sandbox_ready") {
         setHasSandbox(true);
       }
@@ -415,10 +401,6 @@ function BuildWorkspace() {
   };
 
   const previewUrl = sandbox.data?.previewUrl;
-  // Gates chat-only vs full workspace. `hasSandbox` is the this-stream
-  // signal (set the moment sandbox_ready fires); OR'd with the query's own
-  // data so a resumed session that already has a sandbox renders the full
-  // workspace immediately, without waiting for a fresh sandbox_ready event.
   const sandboxExists = hasSandbox || Boolean(previewUrl);
 
   if (isNew) {
@@ -449,10 +431,10 @@ function BuildWorkspace() {
                   handleSend();
                 }
               }}
-              className="min-h-28 resize-none bg-black! pr-12 pb-11 text-white"
+              className="min-h-28 resize-none bg-black! pr-12 pb-11 text-white!"
             />
             {modelsQuery.data && (
-              <div className="absolute bottom-2.5 left-2.5">
+              <div className="absolute bottom-2.5 left-2.5 text-white">
                 <ModelPicker
                   models={modelsQuery.data}
                   value={selectedModelId}
@@ -490,9 +472,6 @@ function BuildWorkspace() {
     );
   }
 
-  // No sandbox yet — the model hasn't called a tool that needed one, so
-  // there's nothing to preview or browse. Plain chat, full width, instead
-  // of reserving space for a workspace that doesn't exist.
   if (!sandboxExists) {
     return (
       <div className="mx-auto h-full max-w-2xl">
