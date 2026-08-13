@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
@@ -12,6 +12,9 @@ import {
   requestPasswordReset,
   resetPassword,
   deleteUser,
+  listAccounts,
+  linkSocial,
+  unlinkAccount,
 } from "@/lib/auth-client";
 import { FRONTEND_URL } from "@/config";
 
@@ -250,6 +253,66 @@ export function useDeleteAccount() {
 
     onError: (error) => {
       toast.error("Could not delete account", {
+        description: error.message,
+      });
+    },
+  });
+}
+
+// =====================
+// Linked accounts (social sign-in providers connected to this user)
+// =====================
+
+export function useListAccounts() {
+  return useQuery({
+    queryKey: ["linked-accounts"],
+    queryFn: async () => {
+      const response = await listAccounts();
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      return response.data;
+    },
+  });
+}
+
+export function useLinkGoogle() {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await linkSocial({
+        provider: "google",
+        callbackURL: `${FRONTEND_URL}/dashboard/settings`,
+      });
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      return response;
+    },
+    onError: (error) => {
+      toast.error("Could not link Google account", {
+        description: error.message,
+      });
+    },
+  });
+}
+
+export function useUnlinkAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (providerId: string) => {
+      const response = await unlinkAccount({ providerId });
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      return response;
+    },
+    onSuccess: () => {
+      toast.success("Account unlinked");
+      queryClient.invalidateQueries({ queryKey: ["linked-accounts"] });
+    },
+    onError: (error) => {
+      toast.error("Could not unlink account", {
         description: error.message,
       });
     },

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { createFileRoute } from "@tanstack/react-router";
+import { CheckCircle2Icon, CircleAlertIcon } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
 
 import {
   Card,
@@ -14,6 +16,8 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@package/ui/components/field";
 import { Button } from "@package/ui/components/button";
 import { Input } from "@package/ui/components/input";
+import { Badge } from "@package/ui/components/badge";
+import { Spinner } from "@package/ui/components/spinner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,11 +38,121 @@ import {
 } from "@/components/custom/form";
 import { PasswordInput } from "@/components/custom/password-input";
 import { passwordFormSchema } from "@/lib/validation-schemas";
-import { useChangePassword, useDeleteAccount } from "@/hooks/use-user";
+import {
+  useChangePassword,
+  useDeleteAccount,
+  useUser,
+  useListAccounts,
+  useLinkGoogle,
+  useUnlinkAccount,
+} from "@/hooks/use-user";
 
 export const Route = createFileRoute("/dashboard/settings/")({
   component: RouteComponent,
 });
+
+function AccountCard() {
+  const { data } = useUser();
+  const user = data?.user;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Account</CardTitle>
+        <CardDescription>Your account's basic details.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Field>
+          <FieldLabel>Email</FieldLabel>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{user?.email}</span>
+            {user?.emailVerified ? (
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle2Icon className="size-3.5" />
+                Verified
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 text-amber-600">
+                <CircleAlertIcon className="size-3.5" />
+                Not verified
+              </Badge>
+            )}
+          </div>
+        </Field>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Every social provider a user could link — only ones actually enabled in
+// better-auth's socialProviders (see apps/server/src/lib/auth.ts) show up
+// here, since listAccounts only ever returns what's actually linkable.
+const SOCIAL_PROVIDERS = [
+  { id: "google", label: "Google", icon: FcGoogle },
+] as const;
+
+function LinkedAccountsCard() {
+  const accountsQuery = useListAccounts();
+  const linkGoogleMutation = useLinkGoogle();
+  const unlinkAccountMutation = useUnlinkAccount();
+
+  const linkedProviderIds = new Set(
+    accountsQuery.data?.map((account) => account.providerId),
+  );
+  const canUnlink = (accountsQuery.data?.length ?? 0) > 1;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Linked accounts</CardTitle>
+        <CardDescription>
+          Connect a social account to sign in without a password.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {SOCIAL_PROVIDERS.map((provider) => {
+          const isLinked = linkedProviderIds.has(provider.id);
+          return (
+            <div
+              key={provider.id}
+              className="flex items-center justify-between rounded-md border p-3"
+            >
+              <div className="flex items-center gap-2">
+                <provider.icon className="size-4" />
+                <span className="text-sm font-medium">{provider.label}</span>
+                {isLinked && <Badge variant="secondary">Connected</Badge>}
+              </div>
+              {isLinked ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canUnlink || unlinkAccountMutation.isPending}
+                  title={
+                    canUnlink
+                      ? undefined
+                      : "Set a password or link another account first, so you don't lock yourself out"
+                  }
+                  onClick={() => unlinkAccountMutation.mutate(provider.id)}
+                >
+                  {unlinkAccountMutation.isPending ? <Spinner /> : "Disconnect"}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={linkGoogleMutation.isPending}
+                  onClick={() => linkGoogleMutation.mutate()}
+                >
+                  {linkGoogleMutation.isPending ? <Spinner /> : "Connect"}
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
 
 function ChangePasswordCard() {
   const changePasswordMutation = useChangePassword();
@@ -218,6 +332,8 @@ function RouteComponent() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
+      <AccountCard />
+      <LinkedAccountsCard />
       <ChangePasswordCard />
       <DeleteAccountCard />
     </div>
