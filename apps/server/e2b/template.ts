@@ -28,7 +28,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
 });
@@ -130,6 +130,8 @@ function App() {
 export default App;
 EOF`,
   )
+
+  .runCmd("npm run build")
 
   .setUser("user")
 

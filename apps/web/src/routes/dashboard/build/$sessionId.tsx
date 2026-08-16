@@ -9,6 +9,7 @@ import { useResolvedTheme } from "@/hooks/use-resolved-theme";
 import { Textarea } from "@package/ui/components/textarea";
 import { Button } from "@package/ui/components/button";
 import { Spinner } from "@package/ui/components/spinner";
+import { MultiStepLoader } from "@package/ui/components/multi-step-loader";
 import { TreeView } from "@package/ui/components/tree-view";
 import { Separator } from "@package/ui/components/separator";
 import {
@@ -90,6 +91,15 @@ const EXAMPLE_PROMPTS = [
 const streamdownPlugins = { cjk, code, math, mermaid };
 
 const ENABLED_MODEL_IDS = new Set(["nvidia", "nvidia-lightning"]);
+
+// Shown in the preview pane while the sandbox exists but hasn't reported a
+// preview URL yet (booting).
+const SANDBOX_LOADING_STATES = [
+  { text: "Spinning up sandbox" },
+  { text: "Installing dependencies" },
+  { text: "Starting dev server" },
+  { text: "Waiting for preview" },
+];
 
 function ModelPicker({
   models,
@@ -633,7 +643,7 @@ function BuildWorkspace() {
         </div>
 
         {view === "preview" ? (
-          <div className="min-h-0 flex-1 bg-muted">
+          <div className="relative min-h-0 flex-1 bg-muted">
             {previewUrl ? (
               <iframe
                 key={previewUrl}
@@ -643,14 +653,18 @@ function BuildWorkspace() {
                 className="size-full border-0"
                 title="Live preview"
               />
-            ) : (
+            ) : sandbox.isError ? (
               <div className="flex size-full items-center justify-center text-muted-foreground">
-                {sandbox.isError ? (
-                  "Failed to load sandbox"
-                ) : (
-                  <Spinner className="size-6" />
-                )}
+                Failed to load sandbox
               </div>
+            ) : (
+              <MultiStepLoader
+                loading
+                loop
+                duration={1500}
+                loadingStates={SANDBOX_LOADING_STATES}
+                className="absolute inset-0"
+              />
             )}
           </div>
         ) : (
