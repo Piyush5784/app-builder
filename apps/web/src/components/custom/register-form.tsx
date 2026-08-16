@@ -22,7 +22,6 @@ import {
   DialogTitle,
 } from "@package/ui/components/dialog";
 import { FcGoogle } from "react-icons/fc";
-// Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
 // import { FaGithub } from "react-icons/fa";
 import {
   Card,
@@ -78,13 +77,10 @@ export default function RegisterForm({
         callbackURL: `${FRONTEND_URL}/dashboard`,
       });
     } finally {
-      // Only reached if the redirect never happened (blocked popup, network
-      // error) — a successful flow navigates away before this runs.
       setIsGoogleLoading(false);
     }
   }
 
-  // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
   // async function loginWithGithub() {
   //   await signIn.social({
   //     provider: "github",
@@ -126,7 +122,6 @@ export default function RegisterForm({
                     {isGoogleLoading ? <Spinner /> : <FcGoogle />}
                     Sign up with Google
                   </Button>
-                  {/* Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET. */}
                   {/* <Button
                     variant="outline"
                     onClick={loginWithGithub}

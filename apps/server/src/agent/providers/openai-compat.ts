@@ -81,7 +81,7 @@ function safeParseJson(text: string): Record<string, unknown> {
 }
 
 export interface OpenAICompatOptions {
-  providerLabel: string; // for log lines, e.g. "openrouter" or "ollama"
+  providerLabel: string;
   url: string;
   headers?: Record<string, string>;
   model: string;
@@ -94,10 +94,13 @@ interface StreamToolCallAccumulator {
   arguments: string;
 }
 
-// Mutated by `requestOnceStreaming` so the retry loop in `chat()` can tell,
-// even after a thrown error, whether any text already reached the user —
-// once true, retrying would duplicate/garble what they've already seen, so
-// that attempt's failure becomes final instead of retried.
+/**
+ * WHY:
+ * Mutated by `requestOnceStreaming` so the retry loop in `chat()` can tell,
+ * even after a thrown error, whether any text already reached the user —
+ * once true, retrying would duplicate/garble what they've already seen, so
+ * that attempt's failure becomes final instead of retried.
+ */
 interface StreamState {
   startedEmitting: boolean;
 }
@@ -143,8 +146,6 @@ async function requestOnceStreaming(
     try {
       parsed = JSON.parse(payload);
     } catch {
-      // A partial/malformed frame — the "\n\n" framing below should prevent
-      // this, but a chunk we can't parse isn't worth failing the run over.
       return;
     }
 
@@ -216,8 +217,6 @@ async function requestOnceStreaming(
       return { content: null, toolCalls: recovered, tokensIn, tokensOut };
     }
 
-    // Looks like a tool-call attempt but didn't parse as clean JSON — that's
-    // a genuinely broken response, worth retrying rather than accepting.
     if (/<tool_call>|<function=/.test(content)) {
       throw new Error(
         `${options.providerLabel} emitted a malformed tool call as text instead of tool_calls: ${content.slice(0, 300)}`,
@@ -270,11 +269,7 @@ export function createOpenAICompatProvider(
           );
         } catch (error) {
           lastError = error;
-          // A deliberate cancellation, not a flaky response — retrying would
-          // just fire another request the caller no longer wants.
           if (signal?.aborted) break;
-          // Already streamed partial text to the user for this attempt —
-          // retrying now would duplicate or garble what they've already seen.
           if (state.startedEmitting) break;
           telemetry.logger.error("provider", "attempt failed", {
             provider: options.providerLabel,

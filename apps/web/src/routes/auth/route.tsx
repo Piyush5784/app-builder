@@ -41,7 +41,6 @@ function AuthLayout() {
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
-      {/* Left panel */}
       <div className="flex h-screen flex-col bg-muted p-1">
         <div className="flex h-screen flex-col items-center justify-center rounded-xl border bg-background">
           <a href="#" className="flex items-center gap-2 font-medium">
@@ -56,7 +55,6 @@ function AuthLayout() {
         </div>
       </div>
 
-      {/* Right panel — random image + developer quote */}
       <div className="relative hidden h-screen lg:block">
         <img
           src={imageUrl}

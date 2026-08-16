@@ -22,10 +22,6 @@ export async function signIn(email: string, password: string = PASSWORD) {
   };
 }
 
-/**
- * Logs in as an already-existing seeded user (e.g. "user1@example.com").
- * Registration is NOT performed here — users must already exist in the DB.
- */
 export async function loginAs(email: string) {
   const { cookie, status, body } = await signIn(email);
   if (status !== 200 || !cookie) {

@@ -56,8 +56,6 @@ export function WebglMorph({
   showControls = false,
 }: WebglMorphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // Mutable so the color picker can repaint the live scene without tearing
-  // down and rebuilding it (the effect below only runs once per mount).
   const colorSchemeRef = useRef<WebglColorScheme>(colorScheme);
   const triggerMorphRef = useRef<() => void>(() => {});
   const repaintRef = useRef<() => void>(() => {});
@@ -106,7 +104,6 @@ export function WebglMorph({
     dirLight2.position.set(-15, -10, -15);
     scene.add(dirLight2);
 
-    // --- Starfield ---------------------------------------------------------
     const starTexture = getStarTexture();
     const starVertices: number[] = [];
     const starSizes: number[] = [];
@@ -163,7 +160,6 @@ export function WebglMorph({
     });
     scene.add(new THREE.Points(starGeometry, starMaterial));
 
-    // --- Particle morph field -----------------------------------------------
     const targetPositions = SHAPE_SEQUENCE.map((shape) =>
       getShapePoints(shape, particleCount, shapeSize),
     );
@@ -288,7 +284,6 @@ export function WebglMorph({
     );
     scene.add(particleSystem);
 
-    // --- Morph orchestration -------------------------------------------------
     let isMorphing = false;
     let morphStart = 0;
     let morphEnd = 0;
@@ -356,7 +351,6 @@ export function WebglMorph({
       particlesGeometry.attributes.color.needsUpdate = true;
     };
 
-    // --- Resize ---------------------------------------------------------------
     function resize() {
       const clientWidth = containerRef.current?.clientWidth ?? 1;
       const clientHeight = containerRef.current?.clientHeight ?? 1;
@@ -370,7 +364,6 @@ export function WebglMorph({
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
 
-    // --- Animation loop ---------------------------------------------------------
     const clock = new THREE.Clock();
     let lastMorphEndTime = 0;
     let rafId = 0;
@@ -384,9 +377,6 @@ export function WebglMorph({
         triggerMorph(t);
       }
 
-      // Slow orbit around the origin — replaces OrbitControls' autoRotate,
-      // which this component doesn't pull in since it's meant to sit
-      // non-interactively behind page content.
       const orbitAngle = elapsed * IDLE_ROTATION_SPEED;
       camera.position.x = Math.sin(orbitAngle) * cameraDistance;
       camera.position.z = Math.cos(orbitAngle) * cameraDistance;
@@ -514,8 +504,6 @@ export function WebglMorph({
       renderer.dispose();
       container.removeChild(canvas);
     };
-    // colorScheme is intentionally excluded — it's synced into colorSchemeRef
-    // by the effect below and repainted in place, not by rebuilding the scene.
   }, [
     particleCount,
     shapeSize,
@@ -527,16 +515,11 @@ export function WebglMorph({
     cameraDistance,
   ]);
 
-  // Imperative sync of the live scene when `colorScheme` changes from outside
-  // — a real external-system update, so this belongs in an effect.
   useEffect(() => {
     colorSchemeRef.current = colorScheme;
     repaintRef.current();
   }, [colorScheme]);
 
-  // Keeping `activeScheme` in step with the `colorScheme` prop is pure state
-  // derivation, not an external-system sync — adjusted directly during
-  // render (React's documented pattern) instead of via a second effect.
   const [trackedColorScheme, setTrackedColorScheme] = useState(colorScheme);
   if (colorScheme !== trackedColorScheme) {
     setTrackedColorScheme(colorScheme);

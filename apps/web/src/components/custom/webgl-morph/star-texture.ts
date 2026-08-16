@@ -2,8 +2,6 @@ import * as THREE from "three";
 
 let cached: THREE.CanvasTexture | null = null;
 
-// Shared by the starfield and the particle system — a single soft dot sprite
-// is all either one needs, so there's no reason to render two.
 export function getStarTexture(): THREE.CanvasTexture {
   if (cached) return cached;
 

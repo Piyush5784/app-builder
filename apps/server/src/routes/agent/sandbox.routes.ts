@@ -3,19 +3,16 @@ import { agent } from "@/agent";
 import { SandboxNotCreatedError } from "@/agent/sandbox";
 import { ApiError, asyncHandler } from "@/middleware/error-handler";
 import { normalLimiter } from "@/middleware/rate-limit";
+import { validate } from "@/middleware/validate";
+import {
+  writeSandboxFileSchema,
+  type WriteSandboxFileBody,
+} from "@/schemas/agent.schema";
 import { createSuccessResponse } from "@/types/api-response";
 import { requireSessionIdParam, requireUserId } from "@/routes/agent/shared";
 
 const sandboxRouter = Router();
 
-// Reopens a session's sandbox (replaying its recorded changes if the old one
-// died) and returns its preview URL. No LLM call — just the sandbox.
-//
-// A session that's only ever been chatted in has no sandbox yet — that's
-// expected, ordinary state, not a failure, so it's a normal 200 with
-// previewUrl: null rather than a 404. SessionNotFoundError (session
-// doesn't exist / isn't owned by this user) is the real error case and
-// still propagates to asyncHandler's .catch(next) as a 404.
 sandboxRouter.get(
   "/sandbox/:sessionId",
   normalLimiter,
@@ -28,9 +25,14 @@ sandboxRouter.get(
       res.status(200).json(createSuccessResponse(result));
     } catch (error) {
       if (error instanceof SandboxNotCreatedError) {
-        res
-          .status(200)
-          .json(createSuccessResponse({ sessionId, previewUrl: null }));
+        const toolInvocations = await agent.core.getToolInvocations(sessionId);
+        res.status(200).json(
+          createSuccessResponse({
+            sessionId,
+            previewUrl: null,
+            toolInvocations,
+          }),
+        );
         return;
       }
       throw error;
@@ -38,7 +40,6 @@ sandboxRouter.get(
   }),
 );
 
-// Recursive file/folder listing for the workspace's code view.
 sandboxRouter.get(
   "/sandbox/:sessionId/files",
   normalLimiter,
@@ -51,7 +52,6 @@ sandboxRouter.get(
   }),
 );
 
-// A single file's content for the code view.
 sandboxRouter.get(
   "/sandbox/:sessionId/file",
   normalLimiter,
@@ -65,6 +65,20 @@ sandboxRouter.get(
 
     const content = await agent.core.readSandboxFile(sessionId, path, userId);
     res.status(200).json(createSuccessResponse({ path, content }));
+  }),
+);
+
+sandboxRouter.put(
+  "/sandbox/:sessionId/file",
+  normalLimiter,
+  validate(writeSandboxFileSchema),
+  asyncHandler(async (req, res) => {
+    const sessionId = requireSessionIdParam(req.params.sessionId);
+    const userId = requireUserId(req);
+    const { path, content } = req.body as WriteSandboxFileBody;
+
+    await agent.core.writeSandboxFile(sessionId, path, content, userId);
+    res.status(200).json(createSuccessResponse({ path }));
   }),
 );
 

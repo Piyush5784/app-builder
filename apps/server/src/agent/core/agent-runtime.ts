@@ -38,11 +38,15 @@ async function hasSufficientCredits(userId: string): Promise<boolean> {
   return (await persistence.credits.getUserCredits(userId)) > 0;
 }
 
-// Core Loop of the Agent: send messages to the LLM, get tool calls, execute them, and repeat until done or cancelled.
-// DB writes per step: LLMCall, then per tool call: ToolInvocation;
-// User.credits + CreditTransaction (persistence.credits.deductCredits) once
-// per successful LLM call, priced from actual token usage. AgentEvent only
-// on the step-limit warning.
+/**
+ * WHY:
+ * Core loop of the agent: send messages to the LLM, get tool calls, execute
+ * them, and repeat until done or cancelled.
+ * DB writes per step: LLMCall, then per tool call: ToolInvocation;
+ * User.credits + CreditTransaction (persistence.credits.deductCredits) once
+ * per successful LLM call, priced from actual token usage. AgentEvent only
+ * on the step-limit warning.
+ */
 async function runLoop(
   sessionId: string,
   runId: string,
@@ -59,17 +63,11 @@ async function runLoop(
   let finalReply = "";
   let filesChanged = false;
 
-  // No fixed step cap — the loop runs until the model finishes on its own,
-  // the run is cancelled, or the user runs out of credits (checked every
-  // iteration below); credits are the actual bound on how long this can go.
   for (let i = 0; ; i++) {
     if (signal.aborted) break;
 
     const step = i + 1;
 
-    // Every model is billed on actual usage, so a run can run out of credits
-    // partway through a multi-step run, not just at the start — re-checked
-    // every step, not just once.
     if (!(await hasSufficientCredits(userId))) {
       finalReply = finalReply || "Ran out of credits partway through the run.";
       break;
@@ -135,17 +133,12 @@ async function runLoop(
         ((result.tokensOut ?? 0) / 1_000_000) *
           Number(pricing.outputPricePerMillion);
     } else {
-      // Every model is expected to have a pricing row (see
-      // packages/db/prisma/seed-model-pricing.ts) — this means a call went
-      // out unbilled, worth knowing about rather than silently eating the
-      // cost.
       telemetry.logger.error("agent", "no pricing configured for model", {
         provider: provider.providerLabel,
         model: provider.model,
       });
     }
 
-    // Each step's LLM call is recorded in the DB.
     const llmCall = await persistence.llmCalls.create({
       data: {
         runId,
@@ -257,13 +250,16 @@ function truncateSessionName(name: string): string {
   return `${trimmed.slice(0, MAX_SESSION_NAME_LENGTH)}…`;
 }
 
-// Core Brain of the Agent: orchestrates the session, LLM provider, and tool
-// execution loop, handling errors and cancellations. The sandbox itself is
-// opened lazily by the guardrail passed into runLoop, not here — a run
-// that never calls a real tool never creates one.
-// DB writes: AgentSession (created via ensureSessionExists on the very
-// first message, name set if new), AgentRun (create, then update with the
-// result), plus whatever runLoop and the guardrail write.
+/**
+ * WHY:
+ * Core brain of the agent: orchestrates the session, LLM provider, and tool
+ * execution loop, handling errors and cancellations. The sandbox itself is
+ * opened lazily by the guardrail passed into runLoop, not here — a run
+ * that never calls a real tool never creates one.
+ * DB writes: AgentSession (created via ensureSessionExists on the very
+ * first message, name set if new), AgentRun (create, then update with the
+ * result), plus whatever runLoop and the guardrail write.
+ */
 export async function runAgent(
   sessionId: string,
   userPrompt: string,
@@ -283,10 +279,6 @@ export async function runAgent(
   let watcher: RunWatcher | undefined;
 
   try {
-    // The session row exists from the very first message, regardless of
-    // whether a sandbox ever gets created — a purely conversational run
-    // still needs somewhere to save its message history against (see
-    // ensureSessionExists's own comment).
     await sandbox.manager.ensureSessionExists(sessionId, userId);
     emit({ type: "session_ready", sessionId });
 
@@ -306,8 +298,6 @@ export async function runAgent(
     const runId = run.id;
     watcher = cancellation.watchForCancellation(runId);
 
-    // Opens (or reconnects to) the sandbox lazily, the first time a tool
-    // call actually needs one — see agent/guardrails/sandbox-guardrail.ts.
     const guardrail = guardrails.createSandboxGuardrail(
       sessionId,
       userId,
@@ -355,8 +345,6 @@ export async function runAgent(
         },
       });
 
-      // Only a sandbox that actually got created needs tearing down — a
-      // run that failed before ever calling a tool never opened one.
       if (guardrail.getState()) {
         await sandbox.manager.destroySandbox(sessionId);
       }
@@ -385,9 +373,6 @@ export async function runAgent(
         try {
           await sandbox.manager.restartDevServer(sandboxState.sandbox);
         } catch (error) {
-          // The run itself already succeeded — a failed restart just means
-          // the preview may still show stale content, not worth failing
-          // the run over.
           telemetry.logger.error("sandbox", "dev server restart failed", {
             error: error instanceof Error ? error.message : String(error),
           });

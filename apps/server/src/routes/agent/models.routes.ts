@@ -6,8 +6,6 @@ import { normalLimiter } from "@/middleware/rate-limit";
 
 const modelsRouter = Router();
 
-// Only id/label — provider/model strings stay server-internal, not that
-// they're secret, just no reason to expose more than the picker needs.
 modelsRouter.get(
   "/models",
   normalLimiter,

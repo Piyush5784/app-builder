@@ -22,10 +22,6 @@ export const credits = {
     return user ? Number(user.credits) : 0;
   },
 
-  // Every model is billed on actual token usage, only known after the LLM
-  // call — so this is unconditional (there's no "reject" outcome once the
-  // provider has already been paid for the call; the pre-call balance > 0
-  // check in agent-runtime.ts is the only gate).
   async deductCredits(
     userId: string,
     runId: string,

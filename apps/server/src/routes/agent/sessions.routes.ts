@@ -53,8 +53,6 @@ sessionsRouter.patch(
   }),
 );
 
-// Aborts whatever LLM call/tool loop is currently running for this session.
-// A no-op (cancelled: false) if nothing was actually in flight.
 sessionsRouter.post(
   "/sessions/:sessionId/cancel",
   normalLimiter,

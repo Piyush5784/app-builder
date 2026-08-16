@@ -15,9 +15,6 @@ export interface ModelOption {
   label: string;
 }
 
-// Every model is billed the same way — actual token usage, priced from
-// ModelPricing (see agent-runtime.ts) — there's no separate free tier.
-// Everyone starts with a $50 credit balance (User.credits' default).
 const MODEL_REGISTRY: ModelOption[] = [
   {
     id: "nvidia",

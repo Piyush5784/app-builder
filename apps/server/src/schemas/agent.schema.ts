@@ -11,3 +11,9 @@ export const updateSessionNameSchema = z.object({
   name: z.string().trim().min(1, "Invalid name"),
 });
 export type UpdateSessionNameBody = z.infer<typeof updateSessionNameSchema>;
+
+export const writeSandboxFileSchema = z.object({
+  path: z.string().min(1, "Invalid path"),
+  content: z.string(),
+});
+export type WriteSandboxFileBody = z.infer<typeof writeSandboxFileSchema>;

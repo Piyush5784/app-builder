@@ -12,11 +12,6 @@ import {
   OPENAI_MODEL,
 } from "@/config";
 
-// One provider per MODEL_REGISTRY entry (see agent/models.ts) — every model
-// is pinned to exactly one provider, so there's no separate configurable
-// "default provider" concept. NVIDIA has two: "nvidia" (Ultra, highest
-// quality) and "nvidiaLightning" (Lightning, same API/key, a much smaller
-// active-params model chosen for speed) — both free under the same key.
 export type ProviderName =
   "gemini" | "nvidia" | "nvidiaLightning" | "groq" | "openai" | "anthropic";
 
@@ -60,9 +55,6 @@ const openaiProvider = createOpenAICompatProvider({
   },
 });
 
-// The provider always comes from the caller's resolved ModelOption (see
-// agent-runtime.ts) — no env-var-based default, since a model is always
-// selected before this is called.
 function getProvider(name: ProviderName): LLMProvider {
   switch (name) {
     case "gemini":

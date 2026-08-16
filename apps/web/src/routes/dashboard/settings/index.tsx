@@ -84,9 +84,6 @@ function AccountCard() {
   );
 }
 
-// Every social provider a user could link — only ones actually enabled in
-// better-auth's socialProviders (see apps/server/src/lib/auth.ts) show up
-// here, since listAccounts only ever returns what's actually linkable.
 const SOCIAL_PROVIDERS = [
   { id: "google", label: "Google", icon: FcGoogle },
 ] as const;

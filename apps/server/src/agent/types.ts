@@ -41,16 +41,14 @@ export type ToolCall =
 export interface ChatMessage {
   role: Role;
   content: string | null;
-  toolCalls?: ToolCall[]; // set on assistant messages that call tools
-  toolCallId?: string; // set on tool result messages
-  name?: ToolName; // tool name, set on tool result messages
+  toolCalls?: ToolCall[];
+  toolCallId?: string;
+  name?: ToolName;
 }
 
 export interface ToolSchema {
   name: ToolName;
   description: string;
-  // JSON-schema describing the tool to the LLM — inherently heterogeneous per-property,
-  // so this stays loose. The actual runtime arguments are typed above via ToolCall.
   parameters: {
     type: "object";
     properties: Record<string, { type: string; description: string }>;
@@ -61,8 +59,6 @@ export interface ToolSchema {
 export interface ProviderResponse {
   content: string | null;
   toolCalls: ToolCall[];
-  // Not every provider response includes usage data — stays optional rather
-  // than defaulting to 0, so "unknown" and "used zero tokens" aren't conflated.
   tokensIn?: number;
   tokensOut?: number;
 }
@@ -74,9 +70,6 @@ export interface LLMProvider {
     messages: ChatMessage[],
     tools: ToolSchema[],
     signal?: AbortSignal,
-    // Called with each text chunk as the reply is generated, for live
-    // token streaming over SSE. Optional — providers that can't stream
-    // (Gemini, for now) just call it once with the full text at the end.
     onToken?: (delta: string) => void,
   ): Promise<ProviderResponse>;
 }

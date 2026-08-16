@@ -34,12 +34,15 @@ export function extractJsonObjects(text: string): string[] {
   return objects;
 }
 
-// Some models (observed with NVIDIA Nemotron) emit tool calls as this
-// pseudo-XML instead of clean JSON:
-//   <tool_call> <function=listFiles> <parameter=path> src </parameter> </function> </tool_call>
-// One <function=...> block per call, zero or more <parameter=key>value</parameter>
-// children inside it. Extracted separately from extractJsonObjects since this
-// isn't JSON at all.
+/**
+ * WHY:
+ * Some models (observed with NVIDIA Nemotron) emit tool calls as this
+ * pseudo-XML instead of clean JSON:
+ *   <tool_call> <function=listFiles> <parameter=path> src </parameter> </function> </tool_call>
+ * One <function=...> block per call, zero or more <parameter=key>value</parameter>
+ * children inside it. Extracted separately from extractJsonObjects since this
+ * isn't JSON at all.
+ */
 function extractXmlFunctionCalls(content: string): ToolCall[] {
   const calls: ToolCall[] = [];
   const functionRe = /<function=([^>]+)>([\s\S]*?)<\/function>/g;
@@ -64,8 +67,7 @@ function extractXmlFunctionCalls(content: string): ToolCall[] {
     try {
       calls.push(toToolCall(`fallback-${Date.now()}-${i}`, name, args));
     } catch {
-      // Unknown tool name or args that don't coerce cleanly — not a
-      // recoverable call, skip it rather than throwing out of recovery.
+      // not a recoverable call
     }
     i++;
   }
@@ -100,12 +102,10 @@ export function extractFallbackToolCalls(content: string): ToolCall[] {
         );
       }
     } catch {
-      // Not parseable JSON — not a recoverable tool call.
+      // not parseable JSON
     }
   }
 
-  // No JSON-style tool call recovered — try the <function=...> pseudo-XML
-  // format instead before giving up.
   if (calls.length === 0) {
     return extractXmlFunctionCalls(content);
   }

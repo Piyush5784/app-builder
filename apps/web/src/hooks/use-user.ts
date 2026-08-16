@@ -91,9 +91,6 @@ export function useRegister() {
       return response;
     },
 
-    // No toast/navigate here — the caller shows a "verify your email"
-    // dialog on success and navigates once the user dismisses it, since
-    // that needs the submitted email and is specific to the register form.
     onError: (error) => {
       toast.error("Registration failed", {
         description: error.message,
@@ -321,9 +318,6 @@ export function useUser() {
 
   useEffect(() => {
     if (!isPending && !data?.user) {
-      // navigate({
-      //   to: "/auth/login",
-      // });
     }
   }, [isPending, data?.user, navigate]);
 

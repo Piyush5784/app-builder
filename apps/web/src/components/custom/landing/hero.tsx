@@ -157,14 +157,12 @@ export function Hero() {
         </a>
       </motion.div>
 
-      {/* Prompt → Agent → Sandbox → App */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.35, ease: EASE }}
         className="relative mt-20 grid w-full max-w-6xl gap-4 text-left lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
       >
-        {/* Chat / prompt panel */}
         <WindowChrome
           label="agent · session"
           icon={<User2 className="size-3" />}
@@ -198,7 +196,6 @@ export function Hero() {
           </div>
         </WindowChrome>
 
-        {/* Browser preview */}
         <WindowChrome label="preview · localhost:3000">
           <div className="border-b border-border bg-foreground/[0.02] px-4 py-2">
             <div className="w-fit rounded-md bg-foreground/[0.06] px-3 py-1 font-mono text-[11px] text-muted-foreground">

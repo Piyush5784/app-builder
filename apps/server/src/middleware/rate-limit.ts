@@ -46,7 +46,6 @@ function createRedisStore(prefix: string, windowMs: number): Store {
   };
 }
 
-// 30 requests per minute
 export const normalLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 50,
@@ -60,7 +59,6 @@ export const normalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// 5 requests per minute
 export const strictLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 10,

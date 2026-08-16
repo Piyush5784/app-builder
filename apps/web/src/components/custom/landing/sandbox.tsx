@@ -67,7 +67,6 @@ export function SandboxSection() {
       <Reveal delay={0.15} className="mt-14">
         <WindowChrome label="sandbox · workspace">
           <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr_1fr]">
-            {/* file explorer */}
             <div className="border-b border-border p-3 lg:min-h-105 lg:border-r lg:border-b-0">
               <div className="mb-2 flex items-center gap-1.5 px-1 text-[11px] text-muted-foreground">
                 <FolderTree className="size-3" />
@@ -91,7 +90,6 @@ export function SandboxSection() {
               </div>
             </div>
 
-            {/* editor */}
             <div className="border-b border-border lg:min-h-105 lg:border-r lg:border-b-0">
               <div className="flex items-center gap-1.5 border-b border-border px-3 py-2 text-[11px] text-muted-foreground">
                 <FileCode2 className="size-3" />
@@ -156,7 +154,6 @@ export function SandboxSection() {
               </div>
             </div>
 
-            {/* terminal + preview stack */}
             <div className="flex flex-col lg:min-h-105">
               <div className="flex-1 border-b border-border">
                 <div className="flex items-center gap-1.5 border-b border-border px-3 py-2 text-[11px] text-muted-foreground">
@@ -193,7 +190,6 @@ export function SandboxSection() {
             </div>
           </div>
 
-          {/* agent activity strip */}
           <div className="flex items-center gap-2 border-t border-border bg-foreground/[0.02] px-4 py-2.5 text-[11px] text-muted-foreground">
             <Bot className="size-3.5 text-foreground/60" />
             <span className="text-foreground/60">Agent</span>

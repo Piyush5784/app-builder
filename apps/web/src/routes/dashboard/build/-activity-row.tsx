@@ -24,7 +24,7 @@ const TOOL_ICON: Record<
   runCommand: TerminalIcon,
 };
 
-function toolLabel(tool: ToolName, args: unknown): string {
+export function toolLabel(tool: ToolName, args: unknown): string {
   const a = (args ?? {}) as Record<string, unknown>;
   switch (tool) {
     case "writeFile":

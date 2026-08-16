@@ -11,9 +11,6 @@ export const passwordSchema = z
   .string()
   .min(1, { message: "Password is required" })
   .min(8, { message: "Password must be at least 8 characters" });
-// .regex(/[^A-Za-z0-9]/, {
-//   message: "Password must contain at least one special character",
-// });
 
 const options = {
   basePath: "/api/v1/auth",
@@ -28,15 +25,8 @@ const options = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
-    // Disabled until we have a real GH_CLIENT_ID/GH_CLIENT_SECRET.
-    // github: {
-    //   enabled: true,
-    //   clientId: process.env.GH_CLIENT_ID!,
-    //   clientSecret: process.env.GH_CLIENT_SECRET!,
-    // },
   },
 
-  // Email + password login/registration
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
@@ -61,7 +51,7 @@ const options = {
       });
     },
     sendOnSignUp: true,
-    expiresIn: 60 * 60 * 24, // 24 hours
+    expiresIn: 60 * 60 * 24,
   },
 
   hooks: {
@@ -100,10 +90,6 @@ const options = {
     },
   },
 
-  // Shares the same Upstash-backed store as express-rate-limit (see
-  // lib/redis.ts) — without this, better-auth's own rate limiter (which
-  // already has strict built-in rules for /sign-in, /sign-up, etc.) counts
-  // per-process, same multi-instance gap that motivated adding Redis here.
   secondaryStorage: {
     get: (key) => redis.getData(key),
     set: async (key, value, ttl) => {

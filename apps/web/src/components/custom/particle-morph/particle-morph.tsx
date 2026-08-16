@@ -196,7 +196,7 @@ export function ParticleMorph({
       y: initial.y.slice(),
       z: initial.z.slice(),
     };
-    morphStartRef.current = now - morphDuration; // start already "settled" into shape
+    morphStartRef.current = now - morphDuration;
     currentShapeRef.current = shape;
     shapeSequenceIndexRef.current = Math.max(0, SHAPE_SEQUENCE.indexOf(shape));
     lastAutoMorphRef.current = now;
@@ -299,7 +299,6 @@ export function ParticleMorph({
       ctx.globalCompositeOperation = glow ? "lighter" : "source-over";
 
       for (let i = 0; i < n; i++) {
-        // Interpolate toward the current morph target.
         const x0 = lerp(start.x[i], target.x[i], eased);
         const y0 = lerp(start.y[i], target.y[i], eased);
         const z0 = lerp(start.z[i], target.z[i], eased);
@@ -323,7 +322,6 @@ export function ParticleMorph({
         const y = y0 + driftY + orbitY;
         const z = z0 + driftZ;
 
-        // Rotate the whole cloud around the vertical axis.
         const rx = x * cosA - z * sinA;
         const rz = x * sinA + z * cosA;
 
@@ -332,7 +330,6 @@ export function ParticleMorph({
         let screenX = rx * perspective;
         let screenY = y * perspective;
 
-        // Cursor interaction.
         if ((mouseRepel || mouseAttract) && mouseRef.current.active) {
           const dx = screenX - mouseRef.current.x;
           const dy = screenY - mouseRef.current.y;
