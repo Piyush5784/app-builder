@@ -14,6 +14,8 @@ import { errorHandler } from "@/middleware/error-handler";
 
 export const app = express();
 
+app.set("trust proxy", 2);
+
 app.disable("etag");
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
