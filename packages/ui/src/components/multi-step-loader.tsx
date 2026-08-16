@@ -50,7 +50,7 @@ const LoaderCore = ({
     <div className="relative mx-auto mt-40 flex max-w-xl flex-col justify-start">
       {loadingStates.map((loadingState, index) => {
         const distance = Math.abs(index - value);
-        const opacity = Math.max(1 - distance * 0.2, 0); // Minimum opacity is 0, keep it 0.2 if you're sane.
+        const opacity = Math.max(1 - distance * 0.2, 0);
 
         return (
           <motion.div
@@ -95,26 +95,27 @@ export const MultiStepLoader = ({
   duration = 2000,
   loop = true,
   className,
+  value: controlledValue,
 }: {
   loadingStates: LoadingState[];
   loading?: boolean;
   duration?: number;
   loop?: boolean;
-  // Defaults to covering the viewport (`fixed inset-0`) like the original
-  // Aceternity component. Pass `"absolute inset-0"` to instead cover just
-  // the nearest `relative` ancestor (e.g. a preview pane) rather than the
-  // whole screen.
   className?: string;
+  value?: number;
 }) => {
-  const [currentState, setCurrentState] = useState(0);
+  const [autoState, setAutoState] = useState(0);
+  const isControlled = controlledValue !== undefined;
+  const currentState = isControlled ? controlledValue : autoState;
 
   useEffect(() => {
+    if (isControlled) return;
     if (!loading) {
-      setCurrentState(0);
+      setAutoState(0);
       return;
     }
     const timeout = setTimeout(() => {
-      setCurrentState((prevState) =>
+      setAutoState((prevState) =>
         loop
           ? prevState === loadingStates.length - 1
             ? 0
@@ -124,7 +125,7 @@ export const MultiStepLoader = ({
     }, duration);
 
     return () => clearTimeout(timeout);
-  }, [currentState, loading, loop, loadingStates.length, duration]);
+  }, [autoState, loading, loop, loadingStates.length, duration, isControlled]);
   return (
     <AnimatePresence mode="wait">
       {loading && (

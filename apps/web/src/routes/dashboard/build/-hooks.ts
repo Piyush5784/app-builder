@@ -8,6 +8,7 @@ import type {
   FileResponse,
   FileTreeNode,
   ModelInfo,
+  PersistedToolInvocation,
   SandboxResponse,
 } from "@/routes/dashboard/build/-types";
 import { buildItemsFromRuns } from "@/routes/dashboard/build/-chat-history";
@@ -30,36 +31,15 @@ export function useRunsQuery(sessionId: string, enabled = true) {
   );
 }
 
-export function useToolInvocationsQuery(sessionId: string, enabled = true) {
-  return useModelQuery("ToolInvocation").useFindMany(
-    {
-      where: { sessionId },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        runId: true,
-        toolName: true,
-        arguments: true,
-        status: true,
-        createdAt: true,
-      },
-    },
-    { enabled },
-  );
-}
-
 export type HistorySeedResult =
   | { status: "pending" }
   | { status: "empty" }
   | { status: "seeded"; items: ChatItem[]; isGenerating: boolean };
 
-// Seeds at most once *per session*, not once ever — this route keeps the
-// same component mounted across session switches, so a plain "ran already"
-// ref would permanently block re-seeding after the first session.
 export function useHistorySeed(
   sessionId: string,
   runs: ReturnType<typeof useRunsQuery>["data"],
-  invocations: ReturnType<typeof useToolInvocationsQuery>["data"],
+  invocations: PersistedToolInvocation[] | undefined,
 ): HistorySeedResult {
   const seededForRef = React.useRef<string | null>(null);
   const [result, setResult] = React.useState<HistorySeedResult>({
@@ -94,7 +74,7 @@ export function useModelsQuery() {
       );
       return res.data.data.models;
     },
-    staleTime: Infinity, // static registry — no reason to refetch
+    staleTime: Infinity,
   });
 }
 
@@ -129,6 +109,29 @@ export function useFileQuery(
   });
 }
 
+export function useSaveFileMutation(sessionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      path,
+      content,
+    }: {
+      path: string;
+      content: string;
+    }) => {
+      await api.put(`/agent/sandbox/${sessionId}/file`, { path, content });
+    },
+    onSuccess: (_data, { path }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["agent-sandbox-file", sessionId, path],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["agent-sandbox-files", sessionId],
+      });
+    },
+  });
+}
+
 export function useSandboxQuery(sessionId: string, enabled = true) {
   return useQuery({
     queryKey: ["agent-sandbox", sessionId],
@@ -142,13 +145,6 @@ export function useSandboxQuery(sessionId: string, enabled = true) {
   });
 }
 
-// Sends the prompt and reads the whole run's events off that one request.
-// `sessionId` is optional — a brand-new session doesn't have one yet, the
-// server generates it and reports it back on "session_ready" (fires
-// immediately, regardless of whether the run ever needs a sandbox).
-//
-// Plain fetch, no useMutation/QueryClient — a request/response mutation
-// abstraction doesn't fit a long-lived SSE stream well here.
 export function useSendPrompt(
   sessionId: string | undefined,
   onEvent: (event: AgentEvent) => void,
@@ -171,7 +167,7 @@ export function useSendPrompt(
       streamPrompt({ prompt, sessionId, model }, onEvent, controller.signal)
         .catch((error: unknown) => {
           if (error instanceof DOMException && error.name === "AbortError") {
-            return; // superseded by a newer stream — not a real failure
+            return;
           }
           onEvent({
             type: "error",
@@ -179,7 +175,6 @@ export function useSendPrompt(
           });
         })
         .finally(() => {
-          // Only clear if nothing newer has already taken over this ref.
           if (abortControllerRef.current === controller) {
             abortControllerRef.current = null;
           }
@@ -199,8 +194,6 @@ export function useCancelGeneration(sessionId: string) {
   });
 }
 
-// Escape stops generation regardless of what's focused — matches the Stop
-// button's behavior without requiring the textarea to have focus.
 export function useCancelOnEscape(
   isGenerating: boolean,
   onCancel: () => void,
@@ -227,25 +220,25 @@ export function useAgentEventHandler(
     (event: AgentEvent) => {
       switch (event.type) {
         case "session_ready": {
-          // No item-list effect here — session identity/navigation is
-          // handled by the route component itself (see $sessionId.tsx),
-          // since it also needs to know whether to reset local state for
-          // a genuinely different session vs. a self-assigned one.
           break;
         }
         case "sandbox_ready": {
-          queryClient.invalidateQueries({
-            queryKey: ["agent-sandbox", event.sessionId],
-          });
+          queryClient.setQueryData(
+            ["agent-sandbox", event.sessionId],
+            (prev: SandboxResponse | undefined) => ({
+              previewUrl: event.previewUrl,
+              toolInvocations: prev?.toolInvocations ?? [],
+            }),
+          );
           break;
         }
         case "step_start": {
-          break; // no UI effect — just marks loop progress
+          break;
         }
         case "token": {
           const isNewMessage = !streamingIdRef.current;
           if (isNewMessage) streamingIdRef.current = crypto.randomUUID();
-          const id = streamingIdRef.current!; // just set above if it was null
+          const id = streamingIdRef.current!;
 
           setItems((prev) =>
             isNewMessage

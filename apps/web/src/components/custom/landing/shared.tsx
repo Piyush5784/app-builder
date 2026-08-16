@@ -17,8 +17,6 @@ export const EASE = [0.16, 1, 0.3, 1] as const;
 // unmount/dep change.
 export function useScrollLines<T extends HTMLElement>(count: number) {
   const containerRef = React.useRef<T>(null);
-  // `count` is a static array length from the caller (e.g. LINES.length) —
-  // it doesn't change across renders, so this ref never needs re-trimming.
   const lineRefs = React.useRef<Array<HTMLElement | null>>([]);
 
   const setLineRef = React.useCallback(
@@ -206,7 +204,6 @@ export function WindowChrome({
         className,
       )}
     >
-      {/* glass spotlight: a soft frosted highlight that tracks the cursor */}
       <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(220px_circle_at_var(--x,50%)_var(--y,0%),black,transparent_70%)] opacity-0 backdrop-blur-[2px] transition-opacity duration-300 group-hover/window:opacity-100" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(260px_circle_at_var(--x,50%)_var(--y,0%),color-mix(in_oklch,var(--color-foreground),transparent_94%),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover/window:opacity-100" />
 

@@ -44,7 +44,7 @@ function toAnthropicMessages(messages: ChatMessage[]): AnthropicMessage[] {
   const result: AnthropicMessage[] = [];
 
   for (const m of messages) {
-    if (m.role === "system") continue; // sent as top-level `system` instead
+    if (m.role === "system") continue;
 
     if (m.role === "user") {
       result.push({ role: "user", content: m.content ?? "" });

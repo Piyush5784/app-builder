@@ -35,12 +35,8 @@ export const redis = {
 
   deleteData: (key: string) => client.del(key),
 
-  // Atomic GETDEL — used for one-time-read values (e.g. verification
-  // tokens) so a read can't race with a concurrent delete.
   getAndDeleteData: <TData = string>(key: string) => client.getdel<TData>(key),
 
-  // INCR + EXPIRE-on-first-increment — the standard fixed-window counter
-  // pattern rate limiting needs; returns the count after incrementing.
   async incrementData(key: string, ttlSeconds: number): Promise<number> {
     const count = await client.incr(key);
     if (count === 1) await client.expire(key, ttlSeconds);
@@ -49,7 +45,5 @@ export const redis = {
 
   decrementData: (key: string) => client.decr(key),
 
-  // Seconds until `key` expires — used to compute the rate limiter's
-  // `resetTime` from the same window the counter above is already using.
   ttlSeconds: (key: string) => client.ttl(key),
 };

@@ -17,9 +17,6 @@ export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 export const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 
 // --- AI agent: providers + models ---
-// Model versions are pinned here, not env-configurable — which model runs
-// is decided entirely by which MODEL_REGISTRY entry (agent/models.ts) was
-// selected, one model per provider, not by an env-var override.
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 export const GEMINI_MODEL = "gemini-2.0-flash-exp";
 export const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!;

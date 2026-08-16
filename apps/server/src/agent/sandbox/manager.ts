@@ -16,11 +16,6 @@ export class SessionNotFoundError extends Error {
   }
 }
 
-// Thrown by getOrCreateSandbox(sessionId, allowCreate: false, ...) when the
-// session is real but has never had a sandbox — e.g. a session that's only
-// ever been chatted in, never asked to build anything. Distinct from
-// SessionNotFoundError (which means the session itself doesn't exist/isn't
-// owned by this user) so callers/logs can tell the two apart.
 export class SandboxNotCreatedError extends Error {
   constructor(sessionId: string) {
     super(`Session ${sessionId} has no sandbox yet`);
@@ -66,8 +61,6 @@ async function getOrCreateSandbox(
   if (existing === null && !allowCreate) {
     throw new SessionNotFoundError(sessionId);
   }
-  // A real session that's only ever been chatted in has no sandboxId yet —
-  // distinct from "session doesn't exist", see SandboxNotCreatedError.
   if (existing !== null && existing.sandboxId === null && !allowCreate) {
     throw new SandboxNotCreatedError(sessionId);
   }
@@ -86,8 +79,7 @@ async function getOrCreateSandbox(
       });
       return { sandbox, isNew: false };
     } catch {
-      // Expected when the old sandbox already died (idle timeout, crash) —
-      // not an error worth a stack trace, just fall through to a fresh one.
+      // fall through to creating a fresh sandbox
     }
   }
 
@@ -104,13 +96,6 @@ async function getOrCreateSandbox(
   return { sandbox: newSandbox, isNew: true };
 }
 
-// Creates the session's row up front, before it's known whether this run
-// will ever touch a sandbox — lets a purely conversational message ("how
-// are you?") still get a durable session + message history, instead of
-// requiring a sandbox to exist just to have somewhere to save the chat.
-// No-ops if the row already exists; never touches sandboxId either way.
-//
-// DB writes: AgentSession — upsert (create only, update is a no-op).
 async function ensureSessionExists(
   sessionId: string,
   userId: string,
@@ -126,7 +111,6 @@ function getPreviewUrl(sandbox: Sandbox): string {
   return `https://${sandbox.getHost(E2B_DEV_PORT)}`;
 }
 
-// DB writes: AgentSession — updateMany (lastActiveAt).
 async function updateSession(sessionId: string): Promise<void> {
   await persistence.agentSessions.updateMany({
     where: { id: sessionId },
@@ -154,7 +138,7 @@ async function restartDevServer(sandbox: Sandbox): Promise<void> {
       cwd: executer.E2B_APP_DIR,
     });
   } catch {
-    // Nothing was listening on the port yet — fine, there's nothing to kill.
+    // nothing was listening on the port
   }
   await sandbox.commands.run("npm run dev", {
     cwd: executer.E2B_APP_DIR,
@@ -162,8 +146,6 @@ async function restartDevServer(sandbox: Sandbox): Promise<void> {
   });
 }
 
-// Kills by id (SandboxApi.kill is static) — no live handle needed, so this
-// works even for a sandbox this process never itself connected to.
 async function destroySandbox(sessionId: string): Promise<void> {
   const existing = await persistence.agentSessions.findUnique({
     where: { id: sessionId },
@@ -201,18 +183,18 @@ async function openSandbox(
   );
 
   if (isNew) {
-    const priorEvents = await eventLog.getEvents(sessionId);
-    if (priorEvents.length > 0) {
-      try {
+    eventLog
+      .getEvents(sessionId)
+      .then(async (priorEvents) => {
+        if (priorEvents.length === 0) return;
         await executer.replayEvents(sandbox, priorEvents);
-      } catch (error) {
+      })
+      .catch(async (error: unknown) => {
         telemetry.logger.error("sandbox", "replay failed", {
           error: error instanceof Error ? error.message : String(error),
         });
         await destroySandbox(sessionId);
-        throw error;
-      }
-    }
+      });
   }
 
   const previewUrl = getPreviewUrl(sandbox);
@@ -221,7 +203,14 @@ async function openSandbox(
 
 /**
  * Reopens a session's sandbox (creating + replaying it if the old one died)
- * and returns its preview URL. No LLM call, no tool loop — just the sandbox.
+ * and returns its preview URL plus that session's tool-invocation history.
+ * No LLM call, no tool loop — just the sandbox.
+ *
+ * The frontend's code view needs a session's tool activity (to render the
+ * chat-history activity rows, and to drive the preview pane's step list
+ * while a sandbox is still booting) at the same time it needs the preview
+ * URL — bundling both into this one response avoids the two firing as
+ * separate round-trips that can visibly land at different times.
  *
  * This is also what the frontend's manual refresh button hits, so it
  * restarts the dev server every call — the same stale-preview problem
@@ -232,18 +221,48 @@ async function openSandbox(
 async function getSandboxUrl(
   sessionId: string,
   userId: string,
-): Promise<{ sessionId: string; previewUrl: string }> {
+): Promise<{
+  sessionId: string;
+  previewUrl: string;
+  toolInvocations: ToolInvocationSummary[];
+}> {
   const { sandbox, previewUrl } = await openSandbox(sessionId, false, userId);
 
-  try {
-    await restartDevServer(sandbox);
-  } catch (error) {
+  restartDevServer(sandbox).catch((error: unknown) => {
     telemetry.logger.error("sandbox", "dev server restart failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-  }
+  });
 
-  return { sessionId, previewUrl };
+  const toolInvocations = await getToolInvocations(sessionId);
+  return { sessionId, previewUrl, toolInvocations };
+}
+
+export interface ToolInvocationSummary {
+  id: string;
+  runId: string | null;
+  toolName: string;
+  arguments: unknown;
+  status: "running" | "success" | "failed";
+  createdAt: Date;
+}
+
+async function getToolInvocations(
+  sessionId: string,
+): Promise<ToolInvocationSummary[]> {
+  const rows = await persistence.toolInvocations.findMany({
+    where: { sessionId },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      runId: true,
+      toolName: true,
+      arguments: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+  return rows;
 }
 
 /**
@@ -268,6 +287,57 @@ async function readSandboxFile(
   const { sandbox } = await openSandbox(sessionId, false, userId);
   const content = await sandbox.files.read(executer.resolvePath(path));
   return typeof content === "string" ? content : String(content);
+}
+
+/**
+ * Writes one file's content from a manual edit in the code view — the user
+ * correcting something the agent got wrong. Reopen-only, same as above:
+ * this never creates a sandbox for a session that doesn't have one yet,
+ * since there'd be nothing to edit.
+ *
+ * DB writes: ToolInvocation (source: "user") — recorded the same way an
+ * agent-driven writeFile would be, with runId/llmCallId left null since no
+ * agent run or LLM call backs this write. Required so eventLog.getEvents'
+ * replay (see openSandbox above) picks the edit back up if the sandbox is
+ * ever recreated — skipping this would make a saved manual fix silently
+ * vanish on the next replay.
+ */
+async function writeSandboxFile(
+  sessionId: string,
+  path: string,
+  content: string,
+  userId: string,
+): Promise<void> {
+  const { sandbox } = await openSandbox(sessionId, false, userId);
+  const startedAt = Date.now();
+
+  try {
+    await sandbox.files.write(executer.resolvePath(path), content);
+    await persistence.toolInvocations.create({
+      data: {
+        sessionId,
+        source: "user",
+        toolName: "writeFile",
+        arguments: { path, content } as never,
+        output: `Wrote ${path}`,
+        status: "success",
+        durationMs: Date.now() - startedAt,
+      },
+    });
+  } catch (error) {
+    await persistence.toolInvocations.create({
+      data: {
+        sessionId,
+        source: "user",
+        toolName: "writeFile",
+        arguments: { path, content } as never,
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : String(error),
+        durationMs: Date.now() - startedAt,
+      },
+    });
+    throw error;
+  }
 }
 
 function collectFilePaths(nodes: FileTreeNode[]): string[] {
@@ -317,7 +387,9 @@ export const manager = {
   destroySandbox,
   openSandbox,
   getSandboxUrl,
+  getToolInvocations,
   listSandboxFiles,
   readSandboxFile,
+  writeSandboxFile,
   downloadSandboxZip,
 };

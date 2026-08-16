@@ -1,3 +1,4 @@
+# Only for local development, not used in production. See the README for how to run the app in prod.
 services:
   postgres:
     image: postgres:16-alpine

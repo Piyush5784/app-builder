@@ -59,8 +59,8 @@ export function generateColorVariants(
   for (let i = 0; i < count; i++) {
     const t = count > 1 ? i / (count - 1) : 0;
     const hueJitter = (rng() - 0.5) * 10;
-    const s = 25 + t * 75; // pale/desaturated -> fully saturated
-    const l = 90 - t * 50; // light tint -> deep accent
+    const s = 25 + t * 75;
+    const l = 90 - t * 50;
     variants.push(`hsl(${(h + hueJitter + 360) % 360}, ${s}%, ${l}%)`);
   }
   return variants;

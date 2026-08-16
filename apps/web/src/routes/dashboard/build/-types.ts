@@ -1,9 +1,8 @@
 import type { ToolName } from "@package/shared";
 
 export interface SandboxResponse {
-  // null when this session has no sandbox yet (still chat-only) — that's
-  // a normal, expected state, not an error (see sandbox.routes.ts).
   previewUrl: string | null;
+  toolInvocations: PersistedToolInvocation[];
 }
 
 export interface ModelInfo {
@@ -45,7 +44,7 @@ export interface PersistedRun {
 
 export interface PersistedToolInvocation {
   id: string;
-  runId: string;
+  runId: string | null;
   toolName: string;
   arguments: unknown;
   status: "running" | "success" | "failed";

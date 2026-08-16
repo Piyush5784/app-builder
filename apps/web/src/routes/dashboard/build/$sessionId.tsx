@@ -58,20 +58,21 @@ import {
   FolderArchiveIcon,
   Share2Icon,
   ChevronDownIcon,
+  CheckIcon,
+  CircleAlertIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { AgentEvent } from "@package/shared";
 import type { ChatItem, ModelInfo } from "@/routes/dashboard/build/-types";
 import { downloadFile, downloadZip } from "@/routes/dashboard/build/-download";
 import { invalidateQueriesForTable } from "@/utils/query-cache";
-import { WebglMorph } from "@/components/custom/webgl-morph/webgl-morph";
 import { useUser } from "@/hooks/use-user";
 import {
   useRunsQuery,
-  useToolInvocationsQuery,
   useHistorySeed,
   useFilesQuery,
   useFileQuery,
+  useSaveFileMutation,
   useSandboxQuery,
   useSendPrompt,
   useCancelGeneration,
@@ -79,7 +80,7 @@ import {
   useAgentEventHandler,
   useModelsQuery,
 } from "@/routes/dashboard/build/-hooks";
-import { ActivityRow } from "@/routes/dashboard/build/-activity-row";
+import { ActivityRow, toolLabel } from "@/routes/dashboard/build/-activity-row";
 import { toTreeData, getLanguage } from "@/routes/dashboard/build/-file-tree";
 
 const EXAMPLE_PROMPTS = [
@@ -92,8 +93,6 @@ const streamdownPlugins = { cjk, code, math, mermaid };
 
 const ENABLED_MODEL_IDS = new Set(["nvidia", "nvidia-lightning"]);
 
-// Shown in the preview pane while the sandbox exists but hasn't reported a
-// preview URL yet (booting).
 const SANDBOX_LOADING_STATES = [
   { text: "Spinning up sandbox" },
   { text: "Installing dependencies" },
@@ -144,12 +143,10 @@ function ModelPicker({
   );
 }
 
-// The message list + input box, shared between the chat-only layout (no
-// sandbox yet) and the left pane of the full preview/code workspace (once
-// one exists) — same chat, just a different amount of screen around it.
 function ChatPanel({
   items,
   isGenerating,
+  isLoadingHistory,
   prompt,
   setPrompt,
   handleSend,
@@ -161,6 +158,7 @@ function ChatPanel({
 }: {
   items: ChatItem[];
   isGenerating: boolean;
+  isLoadingHistory: boolean;
   prompt: string;
   setPrompt: (value: string) => void;
   handleSend: () => void;
@@ -172,62 +170,68 @@ function ChatPanel({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <MessageScrollerProvider autoScroll defaultScrollPosition="end">
-        <MessageScroller className="min-h-0 flex-1">
-          <MessageScrollerViewport>
-            <MessageScrollerContent className="px-4 py-4">
-              {items.map((item) => {
-                if (item.kind === "activity") {
+      {isLoadingHistory ? (
+        <div className="flex flex-1 items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Spinner className="size-3.5" /> Loading chat…
+        </div>
+      ) : (
+        <MessageScrollerProvider autoScroll defaultScrollPosition="end">
+          <MessageScroller className="min-h-0 flex-1">
+            <MessageScrollerViewport>
+              <MessageScrollerContent className="px-4 py-4">
+                {items.map((item) => {
+                  if (item.kind === "activity") {
+                    return (
+                      <MessageScrollerItem key={item.id}>
+                        <ActivityRow activity={item.activity} />
+                      </MessageScrollerItem>
+                    );
+                  }
                   return (
                     <MessageScrollerItem key={item.id}>
-                      <ActivityRow activity={item.activity} />
+                      <Message align={item.kind === "user" ? "end" : "start"}>
+                        <MessageContent>
+                          <Bubble
+                            align={item.kind === "user" ? "end" : "start"}
+                            variant={
+                              item.kind === "user"
+                                ? "default"
+                                : item.kind === "error"
+                                  ? "destructive"
+                                  : "muted"
+                            }
+                          >
+                            <BubbleContent>
+                              {item.kind === "assistant" ? (
+                                <Streamdown
+                                  mode="static"
+                                  plugins={streamdownPlugins}
+                                >
+                                  {item.content}
+                                </Streamdown>
+                              ) : (
+                                item.content
+                              )}
+                            </BubbleContent>
+                          </Bubble>
+                        </MessageContent>
+                      </Message>
                     </MessageScrollerItem>
                   );
-                }
-                return (
-                  <MessageScrollerItem key={item.id}>
-                    <Message align={item.kind === "user" ? "end" : "start"}>
-                      <MessageContent>
-                        <Bubble
-                          align={item.kind === "user" ? "end" : "start"}
-                          variant={
-                            item.kind === "user"
-                              ? "default"
-                              : item.kind === "error"
-                                ? "destructive"
-                                : "muted"
-                          }
-                        >
-                          <BubbleContent>
-                            {item.kind === "assistant" ? (
-                              <Streamdown
-                                mode="static"
-                                plugins={streamdownPlugins}
-                              >
-                                {item.content}
-                              </Streamdown>
-                            ) : (
-                              item.content
-                            )}
-                          </BubbleContent>
-                        </Bubble>
-                      </MessageContent>
-                    </Message>
+                })}
+                {isGenerating && (
+                  <MessageScrollerItem>
+                    <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                      <Spinner className="size-3.5" /> Thinking...
+                    </div>
                   </MessageScrollerItem>
-                );
-              })}
-              {isGenerating && (
-                <MessageScrollerItem>
-                  <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-                    <Spinner className="size-3.5" /> Thinking...
-                  </div>
-                </MessageScrollerItem>
-              )}
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          <MessageScrollerButton />
-        </MessageScroller>
-      </MessageScrollerProvider>
+                )}
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <MessageScrollerButton />
+          </MessageScroller>
+        </MessageScrollerProvider>
+      )}
 
       <div className="border-t border-border p-3">
         <div className="relative">
@@ -322,15 +326,12 @@ function BuildWorkspace() {
 
   const enableHistoryQueries = !isNew && !skipDbSeed;
   const runsQuery = useRunsQuery(sessionId, enableHistoryQueries);
-  const toolInvocationsQuery = useToolInvocationsQuery(
-    sessionId,
-    enableHistoryQueries,
-  );
+  const sandbox = useSandboxQuery(sessionId, !isNew && !isGenerating);
 
   const historySeed = useHistorySeed(
     sessionId,
     runsQuery.data,
-    toolInvocationsQuery.data,
+    enableHistoryQueries ? sandbox.data?.toolInvocations : undefined,
   );
 
   React.useEffect(() => {
@@ -346,7 +347,71 @@ function BuildWorkspace() {
     selectedPath,
     !isNew && view === "code" && Boolean(selectedPath),
   );
-  const sandbox = useSandboxQuery(sessionId, !isNew);
+
+  const [editedContent, setEditedContent] = React.useState<
+    Record<string, string>
+  >({});
+  const [saveStatus, setSaveStatus] = React.useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const saveFileMutation = useSaveFileMutation(sessionId);
+
+  const saveFile = React.useCallback(
+    async (path: string, content: string) => {
+      setSaveStatus("saving");
+      try {
+        await saveFileMutation.mutateAsync({ path, content });
+        setEditedContent((prev) => {
+          const next = { ...prev };
+          delete next[path];
+          return next;
+        });
+        setSaveStatus("saved");
+      } catch {
+        setSaveStatus("error");
+        toast.error(`Failed to save ${path}`);
+      }
+    },
+    [saveFileMutation],
+  );
+
+  React.useEffect(() => {
+    if (!selectedPath || editedContent[selectedPath] === undefined) return;
+    const path = selectedPath;
+    const content = editedContent[path];
+    const timeout = setTimeout(() => {
+      saveFile(path, content);
+    }, 1200);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the edited content for the currently-open path should re-arm the timer
+  }, [selectedPath, editedContent[selectedPath ?? ""]]);
+
+  const selectFile = React.useCallback(
+    (nextPath: string) => {
+      if (
+        selectedPath &&
+        selectedPath !== nextPath &&
+        editedContent[selectedPath] !== undefined
+      ) {
+        saveFile(selectedPath, editedContent[selectedPath]);
+      }
+      setSelectedPath(nextPath);
+    },
+    [selectedPath, editedContent, saveFile],
+  );
+
+  React.useEffect(() => {
+    function handleBeforeUnload() {
+      if (selectedPath && editedContent[selectedPath] !== undefined) {
+        saveFileMutation.mutate({
+          path: selectedPath,
+          content: editedContent[selectedPath],
+        });
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [selectedPath, editedContent, saveFileMutation]);
 
   const baseHandleAgentEvent = useAgentEventHandler(
     sessionId,
@@ -411,17 +476,37 @@ function BuildWorkspace() {
   };
 
   const previewUrl = sandbox.data?.previewUrl;
-  const sandboxExists = hasSandbox || Boolean(previewUrl);
+  const sandboxUnknown = !isNew && sandbox.isLoading;
+  const sandboxExists = hasSandbox || Boolean(previewUrl) || sandboxUnknown;
+
+  const liveActivitySteps = items.filter(
+    (item): item is Extract<ChatItem, { kind: "activity" }> =>
+      item.kind === "activity",
+  );
+  const sandboxLoadingStates =
+    liveActivitySteps.length > 0
+      ? liveActivitySteps.map((item) => ({
+          text: toolLabel(item.activity.tool, item.activity.args),
+        }))
+      : SANDBOX_LOADING_STATES;
+  const sandboxLoadingValue =
+    liveActivitySteps.length > 0
+      ? Math.max(
+          0,
+          liveActivitySteps.findLastIndex(
+            (item) => item.activity.status !== "pending",
+          ) + 1,
+        )
+      : undefined;
 
   if (isNew) {
     return (
       <div className="relative mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-6 px-4">
-        <WebglMorph position="background" />
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-semibold tracking-tight text-white">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
             What do you want to build?
           </h1>
-          <p className="text-white">
+          <p className="text-muted-foreground">
             Describe an app or page and it'll be generated for you in a live
             sandbox.
           </p>
@@ -441,10 +526,10 @@ function BuildWorkspace() {
                   handleSend();
                 }
               }}
-              className="min-h-28 resize-none bg-black! pr-12 pb-11 text-white!"
+              className="min-h-28 resize-none pr-12 pb-11"
             />
             {modelsQuery.data && (
-              <div className="absolute bottom-2.5 left-2.5 text-white">
+              <div className="absolute bottom-2.5 left-2.5 text-foreground">
                 <ModelPicker
                   models={modelsQuery.data}
                   value={selectedModelId}
@@ -471,7 +556,7 @@ function BuildWorkspace() {
                 type="button"
                 disabled={isGenerating}
                 onClick={() => setPrompt(example)}
-                className="rounded-md border border-border bg-white px-3 py-1.5 text-xs text-black transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
               >
                 {example}
               </button>
@@ -488,6 +573,7 @@ function BuildWorkspace() {
         <ChatPanel
           items={items}
           isGenerating={isGenerating}
+          isLoadingHistory={historySeed.status === "pending"}
           prompt={prompt}
           setPrompt={setPrompt}
           handleSend={handleSend}
@@ -512,6 +598,7 @@ function BuildWorkspace() {
         <ChatPanel
           items={items}
           isGenerating={isGenerating}
+          isLoadingHistory={historySeed.status === "pending"}
           prompt={prompt}
           setPrompt={setPrompt}
           handleSend={handleSend}
@@ -555,7 +642,9 @@ function BuildWorkspace() {
               variant="ghost"
               size="icon-xs"
               className=" "
-              disabled={sandbox.isFetching || filesQuery.isFetching}
+              disabled={
+                isGenerating || sandbox.isFetching || filesQuery.isFetching
+              }
               onClick={() => {
                 sandbox.refetch();
                 filesQuery.refetch();
@@ -645,14 +734,21 @@ function BuildWorkspace() {
         {view === "preview" ? (
           <div className="relative min-h-0 flex-1 bg-muted">
             {previewUrl ? (
-              <iframe
-                key={previewUrl}
-                src={previewUrl}
-                loading="lazy"
-                allowFullScreen
-                className="size-full border-0"
-                title="Live preview"
-              />
+              <>
+                <iframe
+                  src={previewUrl}
+                  loading="eager"
+                  referrerPolicy="no-referrer"
+                  allowFullScreen
+                  className="size-full border-0"
+                  title="Live preview"
+                />
+                {sandbox.isFetching && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
+                    <Spinner className="size-5" />
+                  </div>
+                )}
+              </>
             ) : sandbox.isError ? (
               <div className="flex size-full items-center justify-center text-muted-foreground">
                 Failed to load sandbox
@@ -660,9 +756,10 @@ function BuildWorkspace() {
             ) : (
               <MultiStepLoader
                 loading
-                loop
+                loop={sandboxLoadingValue === undefined}
                 duration={1500}
-                loadingStates={SANDBOX_LOADING_STATES}
+                loadingStates={sandboxLoadingStates}
+                value={sandboxLoadingValue}
                 className="absolute inset-0"
               />
             )}
@@ -681,7 +778,7 @@ function BuildWorkspace() {
                   defaultNodeIcon={FolderIcon}
                   initialSelectedItemId={selectedPath ?? undefined}
                   onSelectChange={(item) => {
-                    if (item && !item.children) setSelectedPath(item.id);
+                    if (item && !item.children) selectFile(item.id);
                   }}
                 />
               ) : (
@@ -690,31 +787,92 @@ function BuildWorkspace() {
                 </div>
               )}
             </div>
-            <div className="flex-1">
-              {selectedPath ? (
-                fileQuery.isLoading ? (
-                  <div className="flex size-full items-center justify-center">
-                    <Spinner className="size-6" />
-                  </div>
-                ) : (
-                  <Editor
-                    key={selectedPath}
-                    path={selectedPath}
-                    language={getLanguage(selectedPath)}
-                    value={fileQuery.data?.content ?? ""}
-                    theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
-                    options={{
-                      readOnly: true,
-                      minimap: { enabled: false },
-                      automaticLayout: true,
-                    }}
-                  />
-                )
-              ) : (
-                <div className="flex size-full items-center justify-center text-sm text-muted-foreground">
-                  Select a file to view its content
+            <div className="flex flex-1 flex-col">
+              {selectedPath && (
+                <div className="flex items-center justify-between border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
+                  <span className="truncate font-mono">{selectedPath}</span>
+                  {isGenerating ? (
+                    <span>Agent is working — editing disabled</span>
+                  ) : saveStatus === "saving" ? (
+                    <span className="flex items-center gap-1">
+                      <Spinner className="size-3" /> Saving…
+                    </span>
+                  ) : editedContent[selectedPath] !== undefined ? (
+                    <span>Unsaved changes</span>
+                  ) : saveStatus === "error" ? (
+                    <span className="flex items-center gap-1 text-destructive">
+                      <CircleAlertIcon className="size-3" /> Failed to save
+                    </span>
+                  ) : saveStatus === "saved" ? (
+                    <span className="flex items-center gap-1">
+                      <CheckIcon className="size-3" /> Saved
+                    </span>
+                  ) : null}
                 </div>
               )}
+              <div className="flex-1">
+                {selectedPath ? (
+                  fileQuery.isLoading ? (
+                    <div className="flex size-full items-center justify-center">
+                      <Spinner className="size-6" />
+                    </div>
+                  ) : (
+                    <Editor
+                      key={selectedPath}
+                      path={selectedPath}
+                      language={getLanguage(selectedPath)}
+                      value={
+                        editedContent[selectedPath] ??
+                        fileQuery.data?.content ??
+                        ""
+                      }
+                      onChange={(nextValue) => {
+                        if (nextValue === undefined) return;
+                        setEditedContent((prev) => ({
+                          ...prev,
+                          [selectedPath]: nextValue,
+                        }));
+                      }}
+                      beforeMount={(monaco) => {
+                        monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
+                          {
+                            ...monaco.languages.typescript.typescriptDefaults.getCompilerOptions(),
+                            moduleResolution:
+                              monaco.languages.typescript.ModuleResolutionKind
+                                .NodeJs,
+                            baseUrl: ".",
+                            paths: { "@/*": ["src/*"] },
+                          },
+                        );
+
+                        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(
+                          {
+                            ...monaco.languages.typescript.typescriptDefaults.getDiagnosticsOptions(),
+                            diagnosticCodesToIgnore: [2307, 2792],
+                          },
+                        );
+                      }}
+                      onMount={(editorInstance) => {
+                        editorInstance.onDidBlurEditorWidget(() => {
+                          const path = selectedPath;
+                          const pending = editedContent[path];
+                          if (pending !== undefined) saveFile(path, pending);
+                        });
+                      }}
+                      theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
+                      options={{
+                        readOnly: isGenerating,
+                        minimap: { enabled: false },
+                        automaticLayout: true,
+                      }}
+                    />
+                  )
+                ) : (
+                  <div className="flex size-full items-center justify-center text-sm text-muted-foreground">
+                    Select a file to view its content
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

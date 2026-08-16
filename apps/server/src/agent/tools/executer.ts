@@ -98,9 +98,6 @@ async function replayEvents(
   for (const call of calls) {
     const output = await executeTool(sandbox, call);
     if (output.startsWith("Error")) {
-      // A failed replay step means the sandbox no longer matches what the
-      // conversation history assumes — better to stop than continue on a
-      // silently inconsistent state.
       throw new Error(`Replay of ${call.name} failed: ${output}`);
     }
   }

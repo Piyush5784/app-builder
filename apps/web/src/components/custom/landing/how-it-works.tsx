@@ -40,7 +40,6 @@ export function HowItWorks() {
       />
 
       <div className="relative mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* connecting line for desktop */}
         <div className="pointer-events-none absolute top-8 right-0 left-0 hidden h-px bg-linear-to-r from-transparent via-border to-transparent lg:block" />
 
         {STEPS.map((step, i) => (

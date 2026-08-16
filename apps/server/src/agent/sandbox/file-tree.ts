@@ -8,8 +8,6 @@ export interface FileTreeNode {
   children?: FileTreeNode[];
 }
 
-// Vendor/build output — noisy and huge, never what a "view the code" feature
-// is for.
 const EXCLUDED_DIRS = new Set([
   "node_modules",
   ".git",

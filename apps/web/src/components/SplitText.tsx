@@ -44,14 +44,10 @@ const SplitText: React.FC<SplitTextProps> = ({
     () => document.fonts.status === "loaded",
   );
 
-  // Keep callback ref updated
   useEffect(() => {
     onCompleteRef.current = onLetterAnimationComplete;
   }, [onLetterAnimationComplete]);
 
-  // Fonts already loaded is handled by the useState initializer above (a
-  // render-time read, not a setState-in-effect); this effect only needs to
-  // subscribe to the genuinely async "not loaded yet" case.
   useEffect(() => {
     if (document.fonts.status === "loaded") return;
     document.fonts.ready.then(() => {
@@ -62,7 +58,6 @@ const SplitText: React.FC<SplitTextProps> = ({
   useGSAP(
     () => {
       if (!ref.current || !text || !fontsLoaded) return;
-      // Prevent re-animation if already completed
       if (animationCompletedRef.current) return;
 
       const el = ref.current as HTMLElement & {
@@ -73,7 +68,7 @@ const SplitText: React.FC<SplitTextProps> = ({
         try {
           el._rbsplitInstance.revert();
         } catch {
-          // Instance may already be reverted/torn down — safe to ignore.
+          // instance may already be gone
         }
         el._rbsplitInstance = undefined;
       }
@@ -142,7 +137,7 @@ const SplitText: React.FC<SplitTextProps> = ({
         try {
           splitInstance.revert();
         } catch {
-          // Instance may already be reverted/torn down — safe to ignore.
+          // instance may already be gone
         }
         el._rbsplitInstance = undefined;
       };

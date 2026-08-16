@@ -36,8 +36,10 @@ async function getOrInitHistory(
     : [{ role: "system", content: systemPrompt }];
 }
 
-// DB writes: Message — reads the current row count, then appends only the
-// messages past that count.
+/**
+ * DB writes: Message — reads the current row count, then appends only the
+ * messages past that count.
+ */
 async function saveHistory(
   sessionId: string,
   allMessages: ChatMessage[],

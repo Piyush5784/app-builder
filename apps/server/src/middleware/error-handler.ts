@@ -12,10 +12,6 @@ export class ApiError extends Error {
   }
 }
 
-// Domain errors thrown from agent/* that map to a specific HTTP status here,
-// so route handlers don't each need their own try/catch translating them —
-// see agent.routes.ts, which just lets these propagate to asyncHandler's
-// .catch(next).
 const domainErrorStatus = new Map<new (...args: never[]) => Error, number>([
   [SessionNotFoundError, 404],
   [SandboxNotCreatedError, 404],

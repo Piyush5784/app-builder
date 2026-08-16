@@ -35,7 +35,7 @@ function toGeminiContents(messages: ChatMessage[]): GeminiContent[] {
   const contents: GeminiContent[] = [];
 
   for (const m of messages) {
-    if (m.role === "system") continue; // sent as systemInstruction instead
+    if (m.role === "system") continue;
 
     if (m.role === "user") {
       contents.push({ role: "user", parts: [{ text: m.content ?? "" }] });

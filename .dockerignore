@@ -8,3 +8,4 @@ old
 graphify-out
 docs
 **/*.log
+*.pem
