@@ -243,7 +243,11 @@ export function CheckLine({
       transition={{ duration: 0.35, delay, ease: EASE }}
       className="flex items-center gap-2 font-mono text-[13px]"
     >
-      <span
+      <motion.span
+        key={done ? "done" : "pending"}
+        initial={done ? { scale: 0.6 } : false}
+        animate={{ scale: 1 }}
+        transition={{ duration: 0.3, ease: EASE }}
         className={cn(
           "flex size-4 shrink-0 items-center justify-center rounded-full text-[10px]",
           done
@@ -252,7 +256,7 @@ export function CheckLine({
         )}
       >
         {done ? "✓" : "…"}
-      </span>
+      </motion.span>
       <span className={done ? "text-foreground/80" : "text-muted-foreground"}>
         {children}
       </span>

@@ -133,8 +133,6 @@ export function useSandboxQuery(sessionId: string, enabled = true) {
   return useQuery({
     queryKey: ["agent-sandbox", sessionId],
     queryFn: async () => {
-      // A session with no sandbox yet (still chat-only) is a normal 200
-      // with previewUrl: null here, not an error — see sandbox.routes.ts.
       const res = await api.get<{ data: SandboxResponse }>(
         `/agent/sandbox/${sessionId}`,
       );

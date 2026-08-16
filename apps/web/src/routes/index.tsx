@@ -8,12 +8,12 @@ import { HowItWorks } from "@/components/custom/landing/how-it-works";
 import { SandboxSection } from "@/components/custom/landing/sandbox";
 import { Capabilities } from "@/components/custom/landing/capabilities";
 import { ErrorFixShowcase } from "@/components/custom/landing/error-fix";
-import { Lifecycle } from "@/components/custom/landing/lifecycle";
-import { Templates } from "@/components/custom/landing/templates";
-import { Gallery } from "@/components/custom/landing/gallery";
+// import { Lifecycle } from "@/components/custom/landing/lifecycle";
+// import { Templates } from "@/components/custom/landing/templates";
+// import { Gallery } from "@/components/custom/landing/gallery";
 import { GithubSection } from "@/components/custom/landing/github";
-import { Deployment } from "@/components/custom/landing/deployment";
-import { Security } from "@/components/custom/landing/security";
+// import { Deployment } from "@/components/custom/landing/deployment";
+// import { Security } from "@/components/custom/landing/security";
 import { Pricing } from "@/components/custom/landing/pricing";
 import { Faq } from "@/components/custom/landing/faq";
 import { FinalCta } from "@/components/custom/landing/final-cta";
@@ -46,12 +46,12 @@ function LandingPage() {
       <SandboxSection />
       <Capabilities />
       <ErrorFixShowcase />
-      <Lifecycle />
-      <Templates />
-      <Gallery />
+      {/* <Lifecycle /> */}
+      {/* <Templates /> */}
+      {/* <Gallery /> */}
       <GithubSection />
-      <Deployment />
-      <Security />
+      {/* <Deployment /> */}
+      {/* <Security /> */}
       <Pricing />
       <Faq />
       <FinalCta />

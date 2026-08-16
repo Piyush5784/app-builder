@@ -34,7 +34,45 @@ export function extractJsonObjects(text: string): string[] {
   return objects;
 }
 
-// Extracts tool calls from the content, looking for <tool_call>...</tool_call> blocks first, and if none are found, attempts to extract JSON objects from the entire content. Each valid tool call is converted into a ToolCall object with a unique id.
+// Some models (observed with NVIDIA Nemotron) emit tool calls as this
+// pseudo-XML instead of clean JSON:
+//   <tool_call> <function=listFiles> <parameter=path> src </parameter> </function> </tool_call>
+// One <function=...> block per call, zero or more <parameter=key>value</parameter>
+// children inside it. Extracted separately from extractJsonObjects since this
+// isn't JSON at all.
+function extractXmlFunctionCalls(content: string): ToolCall[] {
+  const calls: ToolCall[] = [];
+  const functionRe = /<function=([^>]+)>([\s\S]*?)<\/function>/g;
+  const paramRe = /<parameter=([^>]+)>([\s\S]*?)<\/parameter>/g;
+
+  let match: RegExpExecArray | null;
+  let i = 0;
+  while ((match = functionRe.exec(content)) !== null) {
+    const name = match[1]?.trim();
+    const body = match[2] ?? "";
+    if (!name) continue;
+
+    const args: Record<string, unknown> = {};
+    let paramMatch: RegExpExecArray | null;
+    paramRe.lastIndex = 0;
+    while ((paramMatch = paramRe.exec(body)) !== null) {
+      const key = paramMatch[1]?.trim();
+      const value = paramMatch[2]?.trim();
+      if (key) args[key] = value ?? "";
+    }
+
+    try {
+      calls.push(toToolCall(`fallback-${Date.now()}-${i}`, name, args));
+    } catch {
+      // Unknown tool name or args that don't coerce cleanly — not a
+      // recoverable call, skip it rather than throwing out of recovery.
+    }
+    i++;
+  }
+
+  return calls;
+}
+
 export function extractFallbackToolCalls(content: string): ToolCall[] {
   const wrapped = [
     ...content.matchAll(/<tool_call>([\s\S]*?)<\/tool_call>/g),
@@ -64,6 +102,12 @@ export function extractFallbackToolCalls(content: string): ToolCall[] {
     } catch {
       // Not parseable JSON — not a recoverable tool call.
     }
+  }
+
+  // No JSON-style tool call recovered — try the <function=...> pseudo-XML
+  // format instead before giving up.
+  if (calls.length === 0) {
+    return extractXmlFunctionCalls(content);
   }
 
   return calls;

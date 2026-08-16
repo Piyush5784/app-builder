@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { ArrowRight, PlayCircle, Sparkles, User2 } from "lucide-react";
@@ -15,7 +16,54 @@ const BUILD_STEPS = [
   "Build successful",
 ];
 
+// Time each step stays "in progress" (typing dots) before it checks off,
+// and how long the fully-checked list holds before the whole thing resets
+// to loop again — so the hero reads as a live agent run instead of a
+// preloaded screenshot.
+const STEP_INTERVAL_MS = 2000;
+const HOLD_AFTER_DONE_MS = 2200;
+
+// Cycles 0..BUILD_STEPS.length: at `n`, steps [0, n) are checked off and
+// step n (if any) is "in progress". Runs continuously — advances one step
+// at a time, holds at the end, then resets to 0 and starts over.
+function useBuildStepCycle(stepCount: number) {
+  const [step, setStep] = React.useState(0);
+
+  React.useEffect(() => {
+    const delay = step >= stepCount ? HOLD_AFTER_DONE_MS : STEP_INTERVAL_MS;
+    const timeout = setTimeout(() => {
+      setStep((prev) => (prev >= stepCount ? 0 : prev + 1));
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [step, stepCount]);
+
+  return step;
+}
+
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5 align-middle">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="size-1 rounded-full bg-foreground/40"
+          animate={{ opacity: [0.25, 1, 0.25] }}
+          transition={{
+            duration: 0.9,
+            repeat: Infinity,
+            delay: i * 0.15,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
 export function Hero() {
+  const step = useBuildStepCycle(BUILD_STEPS.length);
+  const allDone = step >= BUILD_STEPS.length;
+
   return (
     <section
       id="product"
@@ -31,7 +79,7 @@ export function Hero() {
       >
         <div style={{ position: "absolute", inset: 0 }}>
           <DotField
-            dotRadius={1.5}
+            dotRadius={1.2}
             dotSpacing={16}
             cursorRadius={480}
             bulgeOnly
@@ -45,8 +93,9 @@ export function Hero() {
         <ColorBends
           colors={["#71717a", "#a1a1aa", "#52525b"]}
           speed={0.12}
-          scale={1.4}
-          intensity={1.1}
+          scale={2}
+          frequency={2.5}
+          intensity={1}
           warpStrength={1}
           noise={0.08}
           mouseInfluence={0.6}
@@ -129,13 +178,20 @@ export function Hero() {
             </div>
 
             <div className="max-w-[90%] rounded-xl rounded-tl-sm border border-border bg-foreground/[0.03] px-3.5 py-2.5 text-[13px] text-foreground/70">
-              Planning your application…
+              {allDone ? (
+                "Done — your app is live."
+              ) : (
+                <>
+                  {BUILD_STEPS[step]}
+                  <TypingDots />
+                </>
+              )}
             </div>
 
             <div className="mt-1 flex flex-col gap-2 rounded-xl border border-border bg-foreground/[0.03] p-3.5">
-              {BUILD_STEPS.map((step, i) => (
-                <CheckLine key={step} delay={0.5 + i * 0.12}>
-                  {step}
+              {BUILD_STEPS.map((label, i) => (
+                <CheckLine key={label} done={i < step}>
+                  {label}
                 </CheckLine>
               ))}
             </div>
