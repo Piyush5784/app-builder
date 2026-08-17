@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import SplashCursor from "@package/ui/components/SplashCursor";
+import { useRedirectIfAuthenticated } from "@/hooks/use-user";
 import { Navbar } from "@/components/custom/landing/navbar";
 import { Hero } from "@/components/custom/landing/hero";
 import { TrustBar } from "@/components/custom/landing/trust-bar";
@@ -24,6 +25,8 @@ export const Route = createFileRoute("/")({
 });
 
 function LandingPage() {
+  useRedirectIfAuthenticated();
+
   return (
     <main className="bg-background text-foreground">
       <SplashCursor

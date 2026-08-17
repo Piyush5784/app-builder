@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { isMutatingTool, type AgentEvent } from "@package/shared";
 import { api } from "@/utils/axios";
 import { useModelQuery } from "@/hooks/use-model-queries";
@@ -38,20 +39,45 @@ export type HistorySeedResult =
 
 export function useHistorySeed(
   sessionId: string,
+  enabled: boolean,
   runs: ReturnType<typeof useRunsQuery>["data"],
   invocations: PersistedToolInvocation[] | undefined,
 ): HistorySeedResult {
-  const seededForRef = React.useRef<string | null>(null);
+  // Two independent trackers, not one — they guard mutually exclusive
+  // paths (an `enabled` session only ever takes the effect path, a
+  // `!enabled` one only ever takes the render-time path for a given
+  // session) and each needs a different primitive: the effect's own
+  // bookkeeping stays a ref (mutating it doesn't need to trigger a
+  // render), while the render-time branch needs real state, since
+  // reading/writing a ref during render is disallowed (react-hooks/refs).
+  const seededByEffectRef = React.useRef<string | null>(null);
+  const [seededByRenderFor, setSeededByRenderFor] = React.useState<
+    string | null
+  >(null);
   const [result, setResult] = React.useState<HistorySeedResult>({
     status: "pending",
   });
 
+  // A self-assigned/brand-new session deliberately skips fetching DB
+  // history (its items are already being populated live from the SSE
+  // stream) — `enabled: false` means `runs`/`invocations` never arrive,
+  // so without this branch `status` would stay "pending" forever and the
+  // chat panel would show its loading state indefinitely. Render-time
+  // adjustment guarded by `seededByRenderFor` — see apps/web/CLAUDE.md.
+  if (!enabled && seededByRenderFor !== sessionId) {
+    setSeededByRenderFor(sessionId);
+    setResult({ status: "empty" });
+  }
+
   React.useEffect(() => {
-    if (seededForRef.current === sessionId || !runs || !invocations) return;
-    seededForRef.current = sessionId;
+    if (!enabled) return;
+    if (seededByEffectRef.current === sessionId || !runs || !invocations) {
+      return;
+    }
+    seededByEffectRef.current = sessionId;
 
     if (runs.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate: seededForRef guards this to run at most once per session, not a render-time derivation
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate: seededByEffectRef guards this to run at most once per session, not a render-time derivation
       setResult({ status: "empty" });
       return;
     }
@@ -60,7 +86,7 @@ export function useHistorySeed(
       items: buildItemsFromRuns(runs, invocations),
       isGenerating: runs.some((run) => run.status === "running"),
     });
-  }, [sessionId, runs, invocations]);
+  }, [sessionId, enabled, runs, invocations]);
 
   return result;
 }
@@ -362,4 +388,92 @@ export function useAgentEventHandler(
     },
     [sessionId, queryClient, setItems, setIsGenerating],
   );
+}
+
+// Owns the code view's edit-and-autosave state: unsaved buffers per path,
+// save status, a debounced autosave, a flush-on-tab-close, and saving the
+// previous file when switching away from it mid-edit.
+export function useFileEditor(sessionId: string) {
+  const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
+  const [editedContent, setEditedContent] = React.useState<
+    Record<string, string>
+  >({});
+  const [saveStatus, setSaveStatus] = React.useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const saveFileMutation = useSaveFileMutation(sessionId);
+
+  const saveFile = React.useCallback(
+    async (path: string, content: string) => {
+      setSaveStatus("saving");
+      try {
+        await saveFileMutation.mutateAsync({ path, content });
+        setEditedContent((prev) => {
+          const next = { ...prev };
+          delete next[path];
+          return next;
+        });
+        setSaveStatus("saved");
+      } catch {
+        setSaveStatus("error");
+        toast.error(`Failed to save ${path}`);
+      }
+    },
+    [saveFileMutation],
+  );
+
+  React.useEffect(() => {
+    if (!selectedPath || editedContent[selectedPath] === undefined) return;
+    const path = selectedPath;
+    const content = editedContent[path];
+    const timeout = setTimeout(() => {
+      saveFile(path, content);
+    }, 1200);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the edited content for the currently-open path should re-arm the timer
+  }, [selectedPath, editedContent[selectedPath ?? ""]]);
+
+  const selectFile = React.useCallback(
+    (nextPath: string) => {
+      if (
+        selectedPath &&
+        selectedPath !== nextPath &&
+        editedContent[selectedPath] !== undefined
+      ) {
+        saveFile(selectedPath, editedContent[selectedPath]);
+      }
+      setSelectedPath(nextPath);
+    },
+    [selectedPath, editedContent, saveFile],
+  );
+
+  React.useEffect(() => {
+    function handleBeforeUnload() {
+      if (selectedPath && editedContent[selectedPath] !== undefined) {
+        saveFileMutation.mutate({
+          path: selectedPath,
+          content: editedContent[selectedPath],
+        });
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [selectedPath, editedContent, saveFileMutation]);
+
+  // Blurring the editor (clicking elsewhere on the page without switching
+  // files) flushes immediately rather than waiting for the debounce.
+  const flushOnBlur = React.useCallback(() => {
+    if (!selectedPath) return;
+    const pending = editedContent[selectedPath];
+    if (pending !== undefined) saveFile(selectedPath, pending);
+  }, [selectedPath, editedContent, saveFile]);
+
+  return {
+    selectedPath,
+    selectFile,
+    editedContent,
+    setEditedContent,
+    saveStatus,
+    flushOnBlur,
+  };
 }

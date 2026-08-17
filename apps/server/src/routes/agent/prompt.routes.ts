@@ -43,6 +43,17 @@ promptRouter.post(
       res.write(`data: ${JSON.stringify(event)}\n\n`);
     };
 
+    // A long tool call (npm run build, a big sandbox operation) can go
+    // 30-90+ seconds without a single byte written to the stream — long
+    // enough for an intermediate proxy (Cloudflare, Caddy) to treat the
+    // connection as idle and drop it, which looks like a client-side hang
+    // with no error ever reaching the frontend. A comment line is valid
+    // SSE (ignored by EventSource/fetch readers) and keeps the connection
+    // visibly alive without being a real event.
+    const heartbeat = setInterval(() => {
+      res.write(": keep-alive\n\n");
+    }, 15_000);
+
     try {
       await agent.core.runAgent(
         sId,
@@ -59,6 +70,7 @@ promptRouter.post(
         error: message,
       });
     } finally {
+      clearInterval(heartbeat);
       res.end();
     }
   }),

@@ -318,9 +318,7 @@ export function useUser() {
 
   useEffect(() => {
     if (!isPending && !data?.user) {
-      // navigate({
-      //   to: "/auth/login",
-      // });
+      navigate({ to: "/auth/login" });
     }
   }, [isPending, data?.user, navigate]);
 
@@ -329,4 +327,15 @@ export function useUser() {
     isLoading: isPending,
     data: data ? { ...data, user: data.user as SessionUser } : null,
   };
+}
+
+export function useRedirectIfAuthenticated(to: "/dashboard" = "/dashboard") {
+  const { isPending, data } = useSession();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isPending && data?.user) {
+      navigate({ to });
+    }
+  }, [isPending, data?.user, navigate, to]);
 }
