@@ -327,12 +327,14 @@ function DeleteAccountCard() {
 
 function RouteComponent() {
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
-      <AccountCard />
-      <LinkedAccountsCard />
-      <ChangePasswordCard />
-      <DeleteAccountCard />
+    <div className="mx-auto h-full max-w-6xl overflow-y-scroll p-6 md:overflow-hidden">
+      <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <AccountCard />
+        <LinkedAccountsCard />
+        <ChangePasswordCard />
+        <DeleteAccountCard />
+      </div>
     </div>
   );
 }
