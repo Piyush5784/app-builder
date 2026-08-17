@@ -1,5 +1,4 @@
 import { cn } from "@package/ui/lib/utils";
-import React from "react";
 
 export interface LoaderProps {
   variant?:
