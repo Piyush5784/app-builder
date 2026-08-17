@@ -322,7 +322,7 @@ export function useUser() {
         to: "/auth/login",
       });
     }
-    if(!isPending && data?.user){
+    if (!isPending && data?.user) {
       navigate({
         to: "/dashboard",
       });
