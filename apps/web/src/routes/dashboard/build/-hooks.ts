@@ -390,9 +390,6 @@ export function useAgentEventHandler(
   );
 }
 
-// Owns the code view's edit-and-autosave state: unsaved buffers per path,
-// save status, a debounced autosave, a flush-on-tab-close, and saving the
-// previous file when switching away from it mid-edit.
 export function useFileEditor(sessionId: string) {
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
   const [editedContent, setEditedContent] = React.useState<
@@ -422,16 +419,11 @@ export function useFileEditor(sessionId: string) {
     [saveFileMutation],
   );
 
-  React.useEffect(() => {
-    if (!selectedPath || editedContent[selectedPath] === undefined) return;
-    const path = selectedPath;
-    const content = editedContent[path];
-    const timeout = setTimeout(() => {
-      saveFile(path, content);
-    }, 1200);
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the edited content for the currently-open path should re-arm the timer
-  }, [selectedPath, editedContent[selectedPath ?? ""]]);
+  const saveCurrentFile = React.useCallback(() => {
+    if (!selectedPath) return;
+    const pending = editedContent[selectedPath];
+    if (pending !== undefined) saveFile(selectedPath, pending);
+  }, [selectedPath, editedContent, saveFile]);
 
   const selectFile = React.useCallback(
     (nextPath: string) => {
@@ -440,33 +432,23 @@ export function useFileEditor(sessionId: string) {
         selectedPath !== nextPath &&
         editedContent[selectedPath] !== undefined
       ) {
-        saveFile(selectedPath, editedContent[selectedPath]);
+        toast.error(`Save ${selectedPath} before switching files`);
+        return;
       }
       setSelectedPath(nextPath);
     },
-    [selectedPath, editedContent, saveFile],
+    [selectedPath, editedContent],
   );
 
   React.useEffect(() => {
-    function handleBeforeUnload() {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
       if (selectedPath && editedContent[selectedPath] !== undefined) {
-        saveFileMutation.mutate({
-          path: selectedPath,
-          content: editedContent[selectedPath],
-        });
+        e.preventDefault();
       }
     }
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [selectedPath, editedContent, saveFileMutation]);
-
-  // Blurring the editor (clicking elsewhere on the page without switching
-  // files) flushes immediately rather than waiting for the debounce.
-  const flushOnBlur = React.useCallback(() => {
-    if (!selectedPath) return;
-    const pending = editedContent[selectedPath];
-    if (pending !== undefined) saveFile(selectedPath, pending);
-  }, [selectedPath, editedContent, saveFile]);
+  }, [selectedPath, editedContent]);
 
   return {
     selectedPath,
@@ -474,6 +456,6 @@ export function useFileEditor(sessionId: string) {
     editedContent,
     setEditedContent,
     saveStatus,
-    flushOnBlur,
+    saveCurrentFile,
   };
 }

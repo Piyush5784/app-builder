@@ -38,7 +38,7 @@ export function Navbar() {
             <Terminal className="size-4" />
           </span>
           <span className="text-sm font-semibold tracking-tight text-foreground">
-            WebApp Builder
+            Unite
           </span>
         </a>
 

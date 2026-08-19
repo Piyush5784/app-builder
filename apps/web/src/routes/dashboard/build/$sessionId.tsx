@@ -5,6 +5,7 @@ import {
   useParams,
 } from "@tanstack/react-router";
 import { useResolvedTheme } from "@/hooks/use-resolved-theme";
+import { Spinner } from "@package/ui/components/spinner";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -193,12 +194,12 @@ function BuildWorkspace() {
     />
   );
 
-  // Wait for the first sandbox fetch to actually resolve rather than
-  // optimistically assuming "exists" while it's in flight — guessing here
-  // is what caused a show-then-unshow flash on initial load whenever the
-  // real answer turned out to be "no sandbox yet".
   if (sandbox.isLoading) {
-    return <div className="mx-auto h-full max-w-2xl">{chatPanel}</div>;
+    return (
+      <div className="flex size-full items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Spinner className="size-4" /> Loading session…
+      </div>
+    );
   }
 
   if (!sandboxExists) {
@@ -262,7 +263,7 @@ function BuildWorkspace() {
             editedContent={fileEditor.editedContent}
             setEditedContent={fileEditor.setEditedContent}
             saveStatus={fileEditor.saveStatus}
-            onFlushOnBlur={fileEditor.flushOnBlur}
+            onSaveCurrentFile={fileEditor.saveCurrentFile}
             isGenerating={isGenerating}
             resolvedTheme={resolvedTheme}
           />
