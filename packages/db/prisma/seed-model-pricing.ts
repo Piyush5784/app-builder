@@ -1,13 +1,5 @@
 import { prisma } from "../src/prisma";
 
-// Reference data the credit system depends on for every paid model — needed
-// in every environment (not just dev), so this is separate from seed.ts
-// (which wipes and recreates test users). Safe to re-run: only inserts a
-// row if no currently-effective one exists for that provider+model yet.
-//
-// Prices are approximate public list prices at the time this was written —
-// verify against each provider's current pricing page before relying on
-// this for real billing; these are not automatically kept in sync.
 const PRICES: {
   provider: string;
   model: string;

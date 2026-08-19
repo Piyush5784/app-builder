@@ -30,7 +30,7 @@ export function Footer() {
                 <Terminal className="size-4" />
               </span>
               <span className="text-sm font-semibold tracking-tight text-foreground">
-                WebApp Builder
+                Unite
               </span>
             </a>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">

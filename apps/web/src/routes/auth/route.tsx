@@ -1,6 +1,6 @@
 import * as React from "react";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { GalleryVerticalEnd } from "lucide-react";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { Sparkles } from "lucide-react";
 
 function getRandomImageUrl(): string {
   return "https://images.pexels.com/photos/36713144/pexels-photo-36713144.jpeg";
@@ -43,12 +43,12 @@ function AuthLayout() {
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex h-screen flex-col bg-muted p-1">
         <div className="flex h-screen flex-col items-center justify-center rounded-xl border bg-background">
-          <a href="#" className="flex items-center gap-2 font-medium">
+          <Link to="/" className="flex items-center gap-2 font-medium">
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <GalleryVerticalEnd className="size-4" />
+              <Sparkles className="size-4" />
             </div>
-            My App
-          </a>
+            Unite
+          </Link>
           <div className="w-full max-w-md rounded-2xl p-8">
             <Outlet />
           </div>
