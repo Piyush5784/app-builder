@@ -77,12 +77,21 @@ export function WebglMorph({
 
     const canvas = document.createElement("canvas");
     container.appendChild(canvas);
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: true,
-      powerPreference: "high-performance",
-    });
+    // See ColorBends.tsx / SplashCursor.tsx for why this is guarded: WebGL
+    // context creation can fail (hardware acceleration disabled, GPU driver
+    // blocklisted, etc.) and Three.js throws synchronously in that case.
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+      });
+    } catch {
+      container.removeChild(canvas);
+      return;
+    }
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.1;
 
