@@ -105,7 +105,19 @@ export default function SplashCursor({
       COLOR,
     };
 
-    const { gl, ext } = getWebGLContext(canvas);
+    // getWebGLContext throws if no WebGL context can be created at all
+    // (hardware acceleration disabled, GPU driver blocklisted, too many
+    // contexts already open on the page — most visible in Chrome, since
+    // that's where these conditions are most common). With no try/catch
+    // here and no error boundary in the app, that exception was crashing
+    // the whole page instead of just skipping this decorative cursor effect.
+    let webglContext: ReturnType<typeof getWebGLContext>;
+    try {
+      webglContext = getWebGLContext(canvas);
+    } catch {
+      return;
+    }
+    const { gl, ext } = webglContext;
     if (!gl || !ext) return;
 
     if (!ext.supportLinearFiltering) {
