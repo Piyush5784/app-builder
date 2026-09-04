@@ -2,19 +2,47 @@ import * as React from "react";
 import { motion } from "motion/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { cn } from "@package/ui/lib/utils";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 }
 
 export const EASE = [0.16, 1, 0.3, 1] as const;
 
-// Scrubs a list of "terminal line" elements in one by one as the container
-// scrolls through the viewport — lines are tied to scroll position (via
-// ScrollTrigger's scrub) rather than firing once on first view, so scrolling
-// back up un-reveals them too. One ScrollTrigger per mount, cleaned up on
-// unmount/dep change.
+/**
+ * Wraps the page in GSAP's ScrollSmoother for inertia-based smooth
+ * scrolling. Expects the DOM structure ScrollSmoother requires:
+ * a wrapper ref on the outer element and a content ref on its only
+ * child (see `smooth-wrapper`/`smooth-content` usage in routes/index.tsx).
+ * Any `position: fixed` chrome (e.g. the navbar) must live outside the
+ * wrapper — ScrollSmoother transforms its content, which breaks `fixed`
+ * positioning for anything nested inside it.
+ */
+export function useSmoothScroll() {
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!wrapperRef.current || !contentRef.current) return;
+
+    const smoother = ScrollSmoother.create({
+      wrapper: wrapperRef.current,
+      content: contentRef.current,
+      smooth: 1.2,
+      effects: false,
+      normalizeScroll: true,
+    });
+
+    return () => {
+      smoother.kill();
+    };
+  }, []);
+
+  return { wrapperRef, contentRef };
+}
+
 export function useScrollLines<T extends HTMLElement>(count: number) {
   const containerRef = React.useRef<T>(null);
   const lineRefs = React.useRef<Array<HTMLElement | null>>([]);
@@ -122,10 +150,12 @@ export function SectionHeading({
 export function Section({
   id,
   className,
+  contentClassName,
   children,
 }: {
   id?: string;
   className?: string;
+  contentClassName?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -136,14 +166,13 @@ export function Section({
         className,
       )}
     >
-      <div className="mx-auto max-w-6xl">{children}</div>
+      <div className={cn("mx-auto max-w-6xl", contentClassName)}>
+        {children}
+      </div>
     </section>
   );
 }
 
-// Cursor-follow glow: track pointer position as CSS vars so the radial
-// highlight in the pseudo-layer below tracks the mouse instead of sitting
-// fixed — plain pointermove + CSS var, no extra render/state involved.
 function useCursorGlow<T extends HTMLElement>() {
   const ref = React.useRef<T>(null);
 
