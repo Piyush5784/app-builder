@@ -1,68 +1,21 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { ArrowRight, PlayCircle, Sparkles, User2 } from "lucide-react";
-import DotField from "@package/ui/components/DotField";
-import ColorBends from "@package/ui/components/ColorBends";
-import { WindowChrome, CheckLine, EASE } from "./shared";
+import { ArrowRight, PlayCircle, Sparkles } from "lucide-react";
+// import DotField from "@package/ui/components/DotField";
+// import ColorBends from "@package/ui/components/ColorBends";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@package/ui/components/dialog";
+import { WindowChrome, EASE } from "./shared";
 
-const BUILD_STEPS = [
-  "Project structure created",
-  "Dependencies installed",
-  "Authentication configured",
-  "Database schema created",
-  "Dashboard generated",
-  "Running application",
-  "Build successful",
-];
-
-// Time each step stays "in progress" (typing dots) before it checks off,
-// and how long the fully-checked list holds before the whole thing resets
-// to loop again — so the hero reads as a live agent run instead of a
-// preloaded screenshot.
-const STEP_INTERVAL_MS = 2000;
-const HOLD_AFTER_DONE_MS = 2200;
-
-// Cycles 0..BUILD_STEPS.length: at `n`, steps [0, n) are checked off and
-// step n (if any) is "in progress". Runs continuously — advances one step
-// at a time, holds at the end, then resets to 0 and starts over.
-function useBuildStepCycle(stepCount: number) {
-  const [step, setStep] = React.useState(0);
-
-  React.useEffect(() => {
-    const delay = step >= stepCount ? HOLD_AFTER_DONE_MS : STEP_INTERVAL_MS;
-    const timeout = setTimeout(() => {
-      setStep((prev) => (prev >= stepCount ? 0 : prev + 1));
-    }, delay);
-    return () => clearTimeout(timeout);
-  }, [step, stepCount]);
-
-  return step;
-}
-
-function TypingDots() {
-  return (
-    <span className="inline-flex items-center gap-0.5 align-middle">
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="size-1 rounded-full bg-foreground/40"
-          animate={{ opacity: [0.25, 1, 0.25] }}
-          transition={{
-            duration: 0.9,
-            repeat: Infinity,
-            delay: i * 0.15,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-    </span>
-  );
-}
+const DEMO_VIDEO_URL =
+  "https://player.cloudinary.com/embed/?cloud_name=dzf9kamfw&public_id=Screencast_from_2026-09-04_19-44-52_v9yxns";
 
 export function Hero() {
-  const step = useBuildStepCycle(BUILD_STEPS.length);
-  const allDone = step >= BUILD_STEPS.length;
+  const [videoOpen, setVideoOpen] = React.useState(false);
 
   return (
     <section
@@ -78,7 +31,7 @@ export function Hero() {
         style={{ position: "absolute", inset: 0 }}
       >
         <div style={{ position: "absolute", inset: 0 }}>
-          <DotField
+          {/* <DotField
             dotRadius={1.2}
             dotSpacing={16}
             cursorRadius={480}
@@ -88,9 +41,9 @@ export function Hero() {
             gradientFrom="rgba(113, 113, 122, 0.35)"
             gradientTo="rgba(113, 113, 122, 0.12)"
             glowColor="rgba(161, 161, 170, 0.5)"
-          />
+          /> */}
         </div>
-        <ColorBends
+        {/* <ColorBends
           colors={["#71717a", "#a1a1aa", "#52525b"]}
           speed={0.12}
           scale={2}
@@ -100,7 +53,7 @@ export function Hero() {
           noise={0.08}
           mouseInfluence={0.6}
           style={{ position: "absolute", inset: 0, opacity: 0.55 }}
-        />
+        /> */}
       </div>
       <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-background via-background/70 to-background" />
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[600px] bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,color-mix(in_oklch,var(--color-foreground),transparent_92%),transparent)]" />
@@ -148,111 +101,43 @@ export function Hero() {
           Start building for free
           <ArrowRight className="size-4" />
         </Link>
-        <a
-          href="#live-demo"
+        <button
+          type="button"
+          onClick={() => setVideoOpen(true)}
           className="inline-flex items-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-foreground/90 transition-colors hover:bg-foreground/5"
         >
           <PlayCircle className="size-4" />
           Watch how it works
-        </a>
+        </button>
       </motion.div>
+
+      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
+        <DialogContent className="w-[90vw] max-w-5xl p-0 sm:max-w-5xl">
+          <DialogTitle className="sr-only">Product demo video</DialogTitle>
+          <div className="aspect-video w-full overflow-hidden rounded-xl">
+            <iframe
+              src={videoOpen ? DEMO_VIDEO_URL : undefined}
+              className="h-full w-full"
+              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              allowFullScreen
+              title="Product demo video"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.35, ease: EASE }}
-        className="relative mt-20 grid w-full max-w-6xl gap-4 text-left lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
+        className="relative mt-20 w-[70vw] max-w-[1600px] text-left"
       >
-        <WindowChrome
-          label="agent · session"
-          icon={<User2 className="size-3" />}
-        >
-          <div className="flex h-full flex-col gap-3 p-4">
-            <div className="flex justify-end">
-              <div className="max-w-[90%] rounded-xl rounded-tr-sm bg-primary px-3.5 py-2.5 text-[13px] leading-relaxed text-primary-foreground">
-                Build a modern project management SaaS with authentication, a
-                dashboard, projects, tasks, team members, and dark mode.
-              </div>
-            </div>
-
-            <div className="max-w-[90%] rounded-xl rounded-tl-sm border border-border bg-foreground/[0.03] px-3.5 py-2.5 text-[13px] text-foreground/70">
-              {allDone ? (
-                "Done — your app is live."
-              ) : (
-                <>
-                  {BUILD_STEPS[step]}
-                  <TypingDots />
-                </>
-              )}
-            </div>
-
-            <div className="mt-1 flex flex-col gap-2 rounded-xl border border-border bg-foreground/[0.03] p-3.5">
-              {BUILD_STEPS.map((label, i) => (
-                <CheckLine key={label} done={i < step}>
-                  {label}
-                </CheckLine>
-              ))}
-            </div>
-          </div>
-        </WindowChrome>
-
         <WindowChrome label="preview · localhost:3000">
-          <div className="border-b border-border bg-foreground/[0.02] px-4 py-2">
-            <div className="w-fit rounded-md bg-foreground/[0.06] px-3 py-1 font-mono text-[11px] text-muted-foreground">
-              your-app.dev/dashboard
-            </div>
-          </div>
-          <div className="grid grid-cols-[140px_1fr] gap-0 bg-muted/40">
-            <div className="flex flex-col gap-2 border-r border-border p-3">
-              <div className="h-6 w-full rounded-md bg-foreground/10" />
-              {["Dashboard", "Projects", "Tasks", "Team", "Settings"].map(
-                (item, i) => (
-                  <div
-                    key={item}
-                    className={`rounded-md px-2 py-1.5 text-[11px] ${
-                      i === 0
-                        ? "bg-foreground/10 text-foreground/80"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    {item}
-                  </div>
-                ),
-              )}
-            </div>
-            <div className="flex flex-col gap-3 p-4">
-              <div className="flex items-center justify-between">
-                <div className="h-4 w-28 rounded bg-foreground/15" />
-                <div className="h-7 w-20 rounded-md bg-primary/90" />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-16 rounded-lg border border-border bg-foreground/[0.03] p-2.5"
-                  >
-                    <div className="h-2 w-10 rounded bg-foreground/20" />
-                    <div className="mt-2 h-3 w-14 rounded bg-foreground/30" />
-                  </div>
-                ))}
-              </div>
-              <div className="flex-1 rounded-lg border border-border bg-foreground/[0.02] p-3">
-                <div className="mb-3 h-2.5 w-24 rounded bg-foreground/15" />
-                <div className="space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-2 rounded-md bg-foreground/[0.03] p-2"
-                    >
-                      <div className="size-5 rounded-full bg-foreground/10" />
-                      <div className="h-2 flex-1 rounded bg-foreground/10" />
-                      <div className="h-4 w-10 rounded bg-emerald-400/20" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <img
+            src="https://res.cloudinary.com/dzf9kamfw/image/upload/v1788531819/Screenshot_from_2026-09-04_19-46-29_acx9xa.png"
+            alt="App preview"
+            className="h-full w-full object-cover"
+          />
         </WindowChrome>
       </motion.div>
 

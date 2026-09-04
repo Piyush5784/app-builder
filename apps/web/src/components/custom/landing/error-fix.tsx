@@ -16,12 +16,13 @@ export function ErrorFixShowcase() {
       />
 
       <div className="mt-14 grid gap-5 lg:grid-cols-2">
-        <Reveal>
+        <Reveal className="h-full">
           <WindowChrome
             label="build failed"
             icon={
               <AlertTriangle className="size-3 text-red-600 dark:text-red-400" />
             }
+            className="h-full"
           >
             <div className="space-y-3 p-5 font-mono text-[13px]">
               <div className="text-muted-foreground">$ npm run build</div>
@@ -32,10 +33,11 @@ export function ErrorFixShowcase() {
           </WindowChrome>
         </Reveal>
 
-        <Reveal delay={0.1}>
+        <Reveal delay={0.1} className="h-full">
           <WindowChrome
             label="agent"
             icon={<Bot className="size-3 text-foreground/60" />}
+            className="h-full"
           >
             <div className="space-y-4 p-5">
               <div className="rounded-lg border border-border bg-foreground/[0.03] px-3.5 py-2.5 text-[13px] text-foreground/70">
