@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import SplashCursor from "@package/ui/components/SplashCursor";
+// import SplashCursor from "@package/ui/components/SplashCursor";
 import { useRedirectIfAuthenticated } from "@/hooks/use-user";
 import { Navbar } from "@/components/custom/landing/navbar";
 import { Hero } from "@/components/custom/landing/hero";
-import { TrustBar } from "@/components/custom/landing/trust-bar";
-import { LiveDemo } from "@/components/custom/landing/live-demo";
+// import { TrustBar } from "@/components/custom/landing/trust-bar";
+// import { LiveDemo } from "@/components/custom/landing/live-demo";
 import { HowItWorks } from "@/components/custom/landing/how-it-works";
 import { SandboxSection } from "@/components/custom/landing/sandbox";
 import { Capabilities } from "@/components/custom/landing/capabilities";

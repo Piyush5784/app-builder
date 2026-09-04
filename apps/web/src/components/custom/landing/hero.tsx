@@ -2,8 +2,8 @@ import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { ArrowRight, PlayCircle, Sparkles } from "lucide-react";
-import DotField from "@package/ui/components/DotField";
-import ColorBends from "@package/ui/components/ColorBends";
+// import DotField from "@package/ui/components/DotField";
+// import ColorBends from "@package/ui/components/ColorBends";
 import {
   Dialog,
   DialogContent,
