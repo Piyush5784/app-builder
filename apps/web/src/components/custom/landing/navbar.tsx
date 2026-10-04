@@ -1,17 +1,22 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { motion, useScroll, useMotionValueEvent } from "motion/react";
-import { Menu, X, Terminal } from "lucide-react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValueEvent,
+  useScroll,
+} from "motion/react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@package/ui/lib/utils";
-import { ThemeToggle } from "../theme-toggle";
+import { Logo } from "./brand";
+import { EASE } from "./shared";
 
 const NAV_LINKS = [
   { label: "Product", href: "#product" },
   { label: "How it works", href: "#how-it-works" },
   { label: "Features", href: "#capabilities" },
-  { label: "Templates", href: "#templates" },
   { label: "Pricing", href: "#pricing" },
-  { label: "Docs", href: "#" },
+  { label: "FAQ", href: "#faq" },
 ];
 
 export function Navbar() {
@@ -20,103 +25,102 @@ export function Navbar() {
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    setScrolled(latest > 8);
+    setScrolled(latest > 16);
   });
 
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-        scrolled
-          ? "border-b border-border bg-background/70 backdrop-blur-md"
-          : "border-b border-transparent bg-transparent",
+        "dark fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color] duration-500",
+        scrolled || open
+          ? "border-white/[0.07] bg-void/75 backdrop-blur-xl"
+          : "border-transparent",
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <a href="#" className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Terminal className="size-4" />
-          </span>
-          <span className="text-sm font-semibold tracking-tight text-foreground">
-            Unite
-          </span>
-        </a>
+      <div className="relative mx-auto flex h-16 max-w-[1240px] items-center justify-between px-5 sm:px-6">
+        <Logo />
 
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav
+          aria-label="Primary"
+          className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex"
+        >
           {NAV_LINKS.map((link) => (
             <a
               key={link.label}
               href={link.href}
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full px-3.5 py-2 text-[14px] text-mute transition-colors hover:text-white"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 lg:flex">
-          {" "}
-          <ThemeToggle />
+        <div className="flex items-center gap-2">
           <Link
             to="/auth/login"
-            className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="hidden px-3 text-[14px] text-mute transition-colors hover:text-white sm:block"
           >
             Log in
           </Link>
           <Link
             to="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            className="hidden h-9 items-center rounded-full bg-acid px-4 text-[14px] font-medium text-void transition-colors hover:bg-[#d6ff6b] sm:inline-flex"
           >
             Start building
           </Link>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Close menu" : "Open menu"}
+            className="grid size-9 place-items-center rounded-full border border-white/15 text-white lg:hidden"
+          >
+            {open ? <X className="size-4" /> : <Menu className="size-4" />}
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="flex size-9 items-center justify-center rounded-md text-muted-foreground lg:hidden"
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="size-5" /> : <Menu className="size-5" />}
-        </button>
       </div>
 
-      {open ? (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="border-t border-border bg-background/95 px-6 py-4 lg:hidden"
-        >
-          <div className="flex flex-col gap-1">
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-2.5 text-sm text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-              >
-                {link.label}
-              </a>
-            ))}
-            <div className="mt-2 flex flex-col gap-2 border-t border-border pt-4">
-              <ThemeToggle />
-              <Link
-                to="/auth/login"
-                className="rounded-md px-3 py-2.5 text-center text-sm font-medium text-foreground/80 hover:bg-foreground/5"
-              >
-                Log in
-              </Link>
-              <Link
-                to="/dashboard"
-                className="rounded-md bg-primary px-3 py-2.5 text-center text-sm font-medium text-primary-foreground"
-              >
-                Start building
-              </Link>
+      <AnimatePresence>
+        {open ? (
+          <motion.nav
+            id="mobile-nav"
+            aria-label="Mobile"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.35, ease: EASE }}
+            className="overflow-hidden border-t border-white/[0.07] lg:hidden"
+          >
+            <div className="flex flex-col p-3">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="rounded-xl px-3 py-3.5 text-[18px] text-white hover:bg-white/[0.04]"
+                >
+                  {link.label}
+                </a>
+              ))}
+              <div className="mt-2 grid grid-cols-2 gap-2 border-t border-white/[0.07] pt-3">
+                <Link
+                  to="/auth/login"
+                  className="rounded-full border border-white/15 py-2.5 text-center text-[14px] text-white"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className="rounded-full bg-acid py-2.5 text-center text-[14px] font-medium text-void"
+                >
+                  Start building
+                </Link>
+              </div>
             </div>
-          </div>
-        </motion.div>
-      ) : null}
+          </motion.nav>
+        ) : null}
+      </AnimatePresence>
     </header>
   );
 }

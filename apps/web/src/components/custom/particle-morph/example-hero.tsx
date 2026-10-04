@@ -1,9 +1,5 @@
 import { ParticleMorph } from "@/components/custom/particle-morph/particle-morph";
 
-/**
- * Example: a full-bleed AI-product hero using ParticleMorph as the
- * centerpiece, auto-morphing through shapes with mouse repulsion enabled.
- */
 export default function ExampleHero() {
   return (
     <section className="relative flex min-h-screen items-center justify-center">

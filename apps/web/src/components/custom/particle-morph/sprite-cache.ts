@@ -1,11 +1,3 @@
-/**
- * Pre-rendered particle "glow" sprites, one per unique color. Drawing a
- * cached radial-gradient bitmap via `drawImage` at every particle's on-screen
- * size is dramatically cheaper than a real-time `filter: blur()` per DOM
- * node — it's what makes thousands of glowing particles on a single canvas
- * feasible at 60fps.
- */
-
 const SPRITE_RESOLUTION = 64;
 
 function renderSprite(color: string, glow: boolean): HTMLCanvasElement {

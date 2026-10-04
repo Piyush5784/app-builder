@@ -45,9 +45,6 @@ function generateCube(count: number, size: number): Float32Array {
   return points;
 }
 
-// Samples the base uniformly and the four triangular side faces weighted by
-// their actual surface area, so particle density stays even across the shape
-// rather than clumping on whichever face happens to get more random draws.
 function generatePyramid(count: number, size: number): Float32Array {
   const points = new Float32Array(count * 3);
   const halfBase = size / 2;

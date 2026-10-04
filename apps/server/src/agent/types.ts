@@ -58,10 +58,13 @@ export interface ToolSchema {
 
 export interface ProviderResponse {
   content: string | null;
+  reasoning?: string;
   toolCalls: ToolCall[];
   tokensIn?: number;
   tokensOut?: number;
 }
+
+export type TokenKind = "content" | "reasoning";
 
 export interface LLMProvider {
   readonly providerLabel: string;
@@ -70,14 +73,10 @@ export interface LLMProvider {
     messages: ChatMessage[],
     tools: ToolSchema[],
     signal?: AbortSignal,
-    onToken?: (delta: string) => void,
+    onToken?: (delta: string, kind?: TokenKind) => void,
   ): Promise<ProviderResponse>;
 }
 
-/**
- * Single typed boundary between "raw JSON args from the model" and the rest of the app.
- * Every provider must go through this so nothing downstream touches `any`.
- */
 export function toToolCall(
   id: string,
   name: string,

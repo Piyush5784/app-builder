@@ -15,10 +15,6 @@ import type {
 } from "@/routes/dashboard/build/-types";
 import { toTreeData, getLanguage } from "@/routes/dashboard/build/-file-tree";
 
-// The code view's file tree + Monaco editor, with a save-status indicator
-// and an explicit Save action in the header. All edit/save state lives in
-// useFileEditor (-hooks.ts) — this component is purely the rendering of it.
-// Saving only ever happens via the Save button / Ctrl+S, never automatically.
 export function CodeView({
   filesQuery,
   fileQuery,
@@ -161,11 +157,6 @@ export function CodeView({
                   );
                 }}
                 onMount={(editorInstance, monaco) => {
-                  // Monaco intercepts Ctrl/Cmd+S itself while focused, so a
-                  // plain window keydown listener alone isn't reliable —
-                  // this is the documented way to hook it. The window
-                  // listener below covers Ctrl/Cmd+S when focus is
-                  // elsewhere in the code view (e.g. the file tree).
                   editorInstance.addCommand(
                     monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
                     onSaveCurrentFile,

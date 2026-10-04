@@ -16,7 +16,7 @@ function RootComponent() {
 export const Route = createRootRoute({
   component: () => (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="dark">
         <Toaster richColors closeButton />
         <RootComponent />
       </ThemeProvider>

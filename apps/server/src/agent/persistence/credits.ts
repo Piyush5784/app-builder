@@ -1,18 +1,5 @@
 import { prisma } from "@package/db";
 
-/**
- * WHY:
- * The only non-CRUD file in this folder. Deducting credits is a single
- * atomic operation across two tables (User.credits + a CreditTransaction
- * audit row) — decomposing it into generic CRUD calls at the caller would
- * mean every caller re-implements the same `$transaction`, so it's wrapped
- * once here instead.
- *
- * CONTEXT:
- * User isn't an agent-owned table, so getUserCredits/deductCredits are the
- * one place this folder reaches into it — every other file here only touches
- * agent-owned tables.
- */
 export const credits = {
   async getUserCredits(userId: string): Promise<number> {
     const user = await prisma.user.findUnique({

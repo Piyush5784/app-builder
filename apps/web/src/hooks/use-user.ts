@@ -26,10 +26,6 @@ export type SessionUser = BaseUser & {
   credits: number;
 };
 
-// =====================
-// Login Mutation
-// =====================
-
 export function useLogin() {
   const navigate = useNavigate();
 
@@ -66,10 +62,6 @@ export function useLogin() {
   });
 }
 
-// =====================
-// Register Mutation
-// =====================
-
 export function useRegister() {
   return useMutation({
     mutationFn: async (data: {
@@ -99,10 +91,6 @@ export function useRegister() {
   });
 }
 
-// =====================
-// Change password Mutation
-// =====================
-
 export function useChangePassword() {
   return useMutation({
     mutationFn: async (input: {
@@ -130,10 +118,6 @@ export function useChangePassword() {
   });
 }
 
-// =====================
-// Request password reset Mutation
-// =====================
-
 export function useRequestPasswordReset() {
   return useMutation({
     mutationFn: async (email: string) => {
@@ -156,10 +140,6 @@ export function useRequestPasswordReset() {
     },
   });
 }
-
-// =====================
-// Reset password Mutation
-// =====================
 
 export function useResetPassword() {
   const navigate = useNavigate();
@@ -188,10 +168,6 @@ export function useResetPassword() {
   });
 }
 
-// =====================
-// Magic link sign-in Mutation
-// =====================
-
 export function useMagicLinkSignIn() {
   return useMutation({
     mutationFn: async (email: string) => {
@@ -214,10 +190,6 @@ export function useMagicLinkSignIn() {
     },
   });
 }
-
-// =====================
-// Delete account Mutation
-// =====================
 
 export function useDeleteAccount() {
   const navigate = useNavigate();
@@ -246,10 +218,6 @@ export function useDeleteAccount() {
     },
   });
 }
-
-// =====================
-// Linked accounts (social sign-in providers connected to this user)
-// =====================
 
 export function useListAccounts() {
   return useQuery({
@@ -306,10 +274,6 @@ export function useUnlinkAccount() {
     },
   });
 }
-
-// =====================
-// Logout Mutation
-// =====================
 
 export function useUser() {
   const { isPending, data } = useSession();

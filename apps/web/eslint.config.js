@@ -19,12 +19,6 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      // Every TanStack Router file-route exports `const Route =
-      // createFileRoute(...)` alongside its component by convention (and
-      // shadcn/Base UI components co-export hooks/cva() functions the same
-      // way) — that's the file-based-routing layout, not a fast-refresh
-      // hazard. Worst case without this rule is a full reload instead of a
-      // hot-swap during local dev, not a correctness issue.
       "react-refresh/only-export-components": "off",
     },
   },

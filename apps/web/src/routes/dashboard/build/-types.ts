@@ -32,7 +32,8 @@ export interface ActivityEntry {
 
 export type ChatItem =
   | { id: string; kind: "user" | "assistant" | "error"; content: string }
-  | { id: string; kind: "activity"; activity: ActivityEntry };
+  | { id: string; kind: "activity"; activity: ActivityEntry }
+  | { id: string; kind: "reasoning"; content: string; isStreaming: boolean };
 
 export interface PersistedRun {
   id: string;

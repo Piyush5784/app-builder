@@ -43,13 +43,6 @@ export function useHistorySeed(
   runs: ReturnType<typeof useRunsQuery>["data"],
   invocations: PersistedToolInvocation[] | undefined,
 ): HistorySeedResult {
-  // Two independent trackers, not one — they guard mutually exclusive
-  // paths (an `enabled` session only ever takes the effect path, a
-  // `!enabled` one only ever takes the render-time path for a given
-  // session) and each needs a different primitive: the effect's own
-  // bookkeeping stays a ref (mutating it doesn't need to trigger a
-  // render), while the render-time branch needs real state, since
-  // reading/writing a ref during render is disallowed (react-hooks/refs).
   const seededByEffectRef = React.useRef<string | null>(null);
   const [seededByRenderFor, setSeededByRenderFor] = React.useState<
     string | null
@@ -58,12 +51,6 @@ export function useHistorySeed(
     status: "pending",
   });
 
-  // A self-assigned/brand-new session deliberately skips fetching DB
-  // history (its items are already being populated live from the SSE
-  // stream) — `enabled: false` means `runs`/`invocations` never arrive,
-  // so without this branch `status` would stay "pending" forever and the
-  // chat panel would show its loading state indefinitely. Render-time
-  // adjustment guarded by `seededByRenderFor` — see apps/web/CLAUDE.md.
   if (!enabled && seededByRenderFor !== sessionId) {
     setSeededByRenderFor(sessionId);
     setResult({ status: "empty" });
@@ -234,6 +221,14 @@ export function useCancelOnEscape(
   }, [isGenerating, onCancel]);
 }
 
+function settleStreamingReasoning(items: ChatItem[]): ChatItem[] {
+  return items.map((item) =>
+    item.kind === "reasoning" && item.isStreaming
+      ? { ...item, isStreaming: false }
+      : item,
+  );
+}
+
 export function useAgentEventHandler(
   sessionId: string,
   setItems: React.Dispatch<React.SetStateAction<ChatItem[]>>,
@@ -241,6 +236,7 @@ export function useAgentEventHandler(
 ): (event: AgentEvent) => void {
   const queryClient = useQueryClient();
   const streamingIdRef = React.useRef<string | null>(null);
+  const reasoningIdRef = React.useRef<string | null>(null);
 
   return React.useCallback(
     (event: AgentEvent) => {
@@ -259,6 +255,31 @@ export function useAgentEventHandler(
           break;
         }
         case "step_start": {
+          reasoningIdRef.current = null;
+          break;
+        }
+        case "reasoning_token": {
+          const isNewReasoning = !reasoningIdRef.current;
+          if (isNewReasoning) reasoningIdRef.current = crypto.randomUUID();
+          const id = reasoningIdRef.current!;
+
+          setItems((prev) =>
+            isNewReasoning
+              ? [
+                  ...prev,
+                  {
+                    id,
+                    kind: "reasoning",
+                    content: event.delta,
+                    isStreaming: true,
+                  },
+                ]
+              : prev.map((item) =>
+                  item.id === id && item.kind === "reasoning"
+                    ? { ...item, content: item.content + event.delta }
+                    : item,
+                ),
+          );
           break;
         }
         case "token": {
@@ -278,8 +299,14 @@ export function useAgentEventHandler(
           break;
         }
         case "tool_start": {
+          const settledReasoningId = reasoningIdRef.current;
+          reasoningIdRef.current = null;
           setItems((prev) => [
-            ...prev,
+            ...prev.map((item) =>
+              item.id === settledReasoningId && item.kind === "reasoning"
+                ? { ...item, isStreaming: false }
+                : item,
+            ),
             {
               id: crypto.randomUUID(),
               kind: "activity",
@@ -328,17 +355,19 @@ export function useAgentEventHandler(
           setIsGenerating(false);
           const streamingId = streamingIdRef.current;
           streamingIdRef.current = null;
+          reasoningIdRef.current = null;
           setItems((prev) => {
+            const settled = settleStreamingReasoning(prev);
             if (streamingId) {
-              return prev.map((item) =>
+              return settled.map((item) =>
                 item.id === streamingId
                   ? { ...item, content: event.reply }
                   : item,
               );
             }
-            if (!event.reply) return prev;
+            if (!event.reply) return settled;
             return [
-              ...prev,
+              ...settled,
               {
                 id: crypto.randomUUID(),
                 kind: "assistant",
@@ -355,8 +384,11 @@ export function useAgentEventHandler(
           setIsGenerating(false);
           const streamingId = streamingIdRef.current;
           streamingIdRef.current = null;
+          reasoningIdRef.current = null;
           setItems((prev) => [
-            ...prev.filter((item) => item.id !== streamingId),
+            ...settleStreamingReasoning(prev).filter(
+              (item) => item.id !== streamingId,
+            ),
             { id: crypto.randomUUID(), kind: "error", content: event.message },
           ]);
           break;
@@ -365,8 +397,9 @@ export function useAgentEventHandler(
           setIsGenerating(false);
           const streamingId = streamingIdRef.current;
           streamingIdRef.current = null;
+          reasoningIdRef.current = null;
           setItems((prev) => [
-            ...prev
+            ...settleStreamingReasoning(prev)
               .filter((item) => item.id !== streamingId)
               .map((item) =>
                 item.kind === "activity" && item.activity.status === "pending"

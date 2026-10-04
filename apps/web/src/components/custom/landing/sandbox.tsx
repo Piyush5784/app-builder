@@ -1,204 +1,127 @@
-import {
-  FolderTree,
-  FileCode2,
-  TerminalSquare,
-  Globe,
-  ScrollText,
-  Bot,
-} from "lucide-react";
-import {
-  Reveal,
-  Section,
-  SectionHeading,
-  WindowChrome,
-  useScrollLines,
-} from "./shared";
+import * as React from "react";
+import { motion, useScroll, useTransform } from "motion/react";
+import { Download, Eye, MessageSquareText, Wrench } from "lucide-react";
+import { cn } from "@package/ui/lib/utils";
+import { Container, H2, MaskHeading, Reveal, SectionHeader } from "./shared";
 
-const FILES = [
-  { name: "src", type: "dir" },
-  { name: "  components", type: "dir" },
-  { name: "    Navbar.tsx", type: "file", active: true },
-  { name: "    Sidebar.tsx", type: "file" },
-  { name: "    TaskCard.tsx", type: "file" },
-  { name: "  pages", type: "dir" },
-  { name: "    Dashboard.tsx", type: "file" },
-  { name: "    Projects.tsx", type: "file" },
-  { name: "  lib", type: "dir" },
-  { name: "    auth.ts", type: "file" },
-  { name: "    db.ts", type: "file" },
-  { name: "  App.tsx", type: "file" },
-  { name: "package.json", type: "file" },
-  { name: "tsconfig.json", type: "file" },
-  { name: ".env", type: "file" },
-];
+const SCREENSHOT =
+  "https://res.cloudinary.com/dzf9kamfw/image/upload/v1788531819/Screenshot_from_2026-09-04_19-46-29_acx9xa.png";
 
-const CODE_LINES = [
-  { t: "// src/components/Navbar.tsx", c: "text-muted-foreground/60" },
-  { t: "", c: "" },
-  { t: "import", c: "text-sky-600 dark:text-sky-400" },
-  { t: " { Link } ", c: "text-foreground/70" },
-  { t: "from", c: "text-sky-600 dark:text-sky-400" },
-  { t: ' "react-router-dom"', c: "text-emerald-600 dark:text-emerald-400" },
-  { t: ";", c: "text-foreground/40" },
-];
-
-const TERMINAL_LINES = [
-  { text: "$ npm install", tone: "text-foreground/70" },
-  { text: "added 214 packages in 6s", tone: "text-muted-foreground" },
-  { text: "$ npm run dev", tone: "text-foreground/70" },
-  { text: "vite v5.4.0 dev server", tone: "text-muted-foreground" },
-  { text: "➜ ready on :3000", tone: "text-emerald-600 dark:text-emerald-400" },
-  { text: "watching for file changes…", tone: "text-muted-foreground" },
+const CALLOUTS = [
+  {
+    icon: MessageSquareText,
+    title: "Chat with your agent",
+    copy: "Ask for a change in plain words.",
+    className: "left-[3%] top-[62%]",
+  },
+  {
+    icon: Wrench,
+    title: "Every step, visible",
+    copy: "Files read, edits made, commands run.",
+    className: "left-[16%] top-[6%]",
+  },
+  {
+    icon: Eye,
+    title: "Live preview",
+    copy: "The real app, running in the sandbox.",
+    className: "right-[4%] top-[44%]",
+  },
+  {
+    icon: Download,
+    title: "Code, download, share",
+    copy: "Switch to code or take it with you.",
+    className: "right-[6%] top-[3%]",
+  },
 ];
 
 export function SandboxSection() {
-  const { containerRef, setLineRef } = useScrollLines<HTMLDivElement>(
-    TERMINAL_LINES.length,
-  );
+  const frame = React.useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: frame,
+    offset: ["start end", "start 0.3"],
+  });
+  const rotateX = useTransform(scrollYProgress, [0, 1], [18, 0]);
+  const y = useTransform(scrollYProgress, [0, 1], [60, 0]);
 
   return (
-    <Section id="sandbox">
-      <SectionHeading
-        kicker="The sandbox"
-        title="A real development environment for your AI agent."
-        description="The agent doesn't just suggest code. It works inside an isolated environment where it can create files, run commands, install dependencies, inspect errors, and verify the result."
-      />
+    <section id="sandbox" className="scroll-mt-20 pb-24 sm:pb-32">
+      <Container>
+        <SectionHeader
+          eyebrow="The workspace"
+          copy="The agent doesn't just suggest code. It works inside an isolated environment where it creates files, runs commands, installs dependencies, inspects errors and verifies the result — while you watch."
+          title={
+            <MaskHeading
+              lines={["A real dev environment", "for your AI agent."]}
+              accentFrom={1}
+              className={H2}
+            />
+          }
+        />
 
-      <Reveal delay={0.15} className="mt-14">
-        <WindowChrome label="sandbox · workspace">
-          <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr_1fr]">
-            <div className="border-b border-border p-3 lg:min-h-105 lg:border-r lg:border-b-0">
-              <div className="mb-2 flex items-center gap-1.5 px-1 text-[11px] text-muted-foreground">
-                <FolderTree className="size-3" />
-                Explorer
-              </div>
-              <div className="space-y-1">
-                {FILES.map((f) => (
-                  <div
-                    key={f.name}
-                    className={`truncate rounded px-2 py-1 font-mono text-[11px] whitespace-pre ${
-                      f.active
-                        ? "bg-foreground/10 text-foreground/90"
-                        : f.type === "dir"
-                          ? "text-muted-foreground"
-                          : "text-muted-foreground/70"
-                    }`}
-                  >
-                    {f.name}
-                  </div>
-                ))}
-              </div>
+        <div ref={frame} className="relative mt-14 [perspective:1800px]">
+          <div
+            className="absolute inset-x-[10%] top-10 bottom-0 rounded-[40px] bg-acid/10 blur-[100px]"
+            aria-hidden="true"
+          />
+          <motion.div
+            style={{ rotateX, y, transformOrigin: "50% 0%" }}
+            className="relative overflow-hidden rounded-2xl border border-white/10 bg-coal p-1.5 shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)]"
+          >
+            <div className="overflow-hidden rounded-xl">
+              {/* The capture includes the browser's toolbar; pull it out of view. */}
+              <img
+                src={SCREENSHOT}
+                alt="The Wb workspace: the agent's chat and tool steps on the left, the live preview of the generated app on the right."
+                loading="lazy"
+                className="-mt-[2.7%] block w-full"
+              />
             </div>
+          </motion.div>
 
-            <div className="border-b border-border lg:min-h-105 lg:border-r lg:border-b-0">
-              <div className="flex items-center gap-1.5 border-b border-border px-3 py-2 text-[11px] text-muted-foreground">
-                <FileCode2 className="size-3" />
-                Navbar.tsx
+          {CALLOUTS.map((c, i) => (
+            <Reveal
+              key={c.title}
+              delay={0.3 + i * 0.12}
+              className={cn("absolute hidden lg:block", c.className)}
+            >
+              <div className="flex max-w-[230px] items-start gap-3 rounded-xl border border-white/10 bg-void/85 p-3 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl">
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-acid text-void">
+                  <c.icon className="size-4" aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="block text-[13px] font-medium text-white">
+                    {c.title}
+                  </span>
+                  <span className="mt-0.5 block text-[12px] leading-snug text-mute">
+                    {c.copy}
+                  </span>
+                </span>
               </div>
-              <div className="space-y-1.5 p-3 font-mono text-[11px] leading-relaxed">
-                <div>
-                  {CODE_LINES.map((seg, i) => (
-                    <span key={i} className={seg.c}>
-                      {seg.t}
-                    </span>
-                  ))}
-                </div>
-                <div className="text-foreground/40">
-                  <span className="text-purple-600 dark:text-purple-400">
-                    export default
-                  </span>{" "}
-                  <span className="text-purple-600 dark:text-purple-400">
-                    function
-                  </span>{" "}
-                  <span className="text-amber-600 dark:text-yellow-300">
-                    Navbar
-                  </span>
-                  () {"{"}
-                </div>
-                <div className="pl-4 text-foreground/40">
-                  <span className="text-purple-600 dark:text-purple-400">
-                    return
-                  </span>{" "}
-                  (
-                </div>
-                <div className="pl-8 text-foreground/30">
-                  &lt;nav className=
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    "flex items-center justify-between px-6 py-4"
-                  </span>
-                  &gt;
-                </div>
-                <div className="pl-12 text-foreground/30">
-                  &lt;
-                  <span className="text-red-600 dark:text-red-300">
-                    Link
-                  </span>{" "}
-                  to=
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    "/"
-                  </span>
-                  &gt;Logo&lt;/
-                  <span className="text-red-600 dark:text-red-300">Link</span>
-                  &gt;
-                </div>
-                <div className="pl-12 text-foreground/30">
-                  &lt;
-                  <span className="text-red-600 dark:text-red-300">nav</span>
-                  &gt;...&lt;/
-                  <span className="text-red-600 dark:text-red-300">nav</span>
-                  &gt;
-                </div>
-                <div className="pl-8 text-foreground/30">&lt;/nav&gt;</div>
-                <div className="pl-4 text-foreground/40">);</div>
-                <div className="text-foreground/40">{"}"}</div>
-              </div>
-            </div>
+            </Reveal>
+          ))}
+        </div>
 
-            <div className="flex flex-col lg:min-h-105">
-              <div className="flex-1 border-b border-border">
-                <div className="flex items-center gap-1.5 border-b border-border px-3 py-2 text-[11px] text-muted-foreground">
-                  <TerminalSquare className="size-3" />
-                  Terminal
-                </div>
-                <div
-                  ref={containerRef}
-                  className="space-y-1 p-3 font-mono text-[11px]"
-                >
-                  {TERMINAL_LINES.map((line, i) => (
-                    <div key={i} ref={setLineRef(i)} className={line.tone}>
-                      {line.text}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-1.5 border-b border-border px-3 py-2 text-[11px] text-muted-foreground">
-                  <Globe className="size-3" />
-                  Preview
-                </div>
-                <div className="p-3">
-                  <div className="h-28 rounded-md border border-border bg-foreground/[0.03] p-2.5">
-                    <div className="h-2 w-16 rounded bg-foreground/15" />
-                    <div className="mt-2 grid grid-cols-3 gap-1.5">
-                      <div className="h-8 rounded bg-foreground/[0.05]" />
-                      <div className="h-8 rounded bg-foreground/[0.05]" />
-                      <div className="h-8 rounded bg-foreground/[0.05]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 border-t border-border bg-foreground/[0.02] px-4 py-2.5 text-[11px] text-muted-foreground">
-            <Bot className="size-3.5 text-foreground/60" />
-            <span className="text-foreground/60">Agent</span>
-            <span className="text-muted-foreground/60">·</span>
-            <ScrollText className="size-3 text-muted-foreground/60" />
-            <span>Editing Navbar.tsx, then re-running build…</span>
-          </div>
-        </WindowChrome>
-      </Reveal>
-    </Section>
+        <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:hidden">
+          {CALLOUTS.map((c) => (
+            <li
+              key={c.title}
+              className="kestrel-card flex items-start gap-3 p-4"
+            >
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-acid text-void">
+                <c.icon className="size-4" aria-hidden="true" />
+              </span>
+              <span>
+                <span className="block text-[14px] font-medium text-white">
+                  {c.title}
+                </span>
+                <span className="mt-0.5 block text-[13px] text-mute">
+                  {c.copy}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Container>
+    </section>
   );
 }

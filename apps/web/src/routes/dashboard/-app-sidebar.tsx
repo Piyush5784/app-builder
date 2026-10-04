@@ -130,7 +130,7 @@ export function AppSidebar() {
               }
             >
               <Sparkles />
-              <span>Unite</span>
+              <span>Wb</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

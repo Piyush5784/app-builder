@@ -1,115 +1,159 @@
 import * as React from "react";
-import { Link } from "@tanstack/react-router";
-import { motion } from "motion/react";
-import { ArrowRight, PlayCircle, Sparkles } from "lucide-react";
-// import DotField from "@package/ui/components/DotField";
-// import ColorBends from "@package/ui/components/ColorBends";
+import { ArrowRight, PlayCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@package/ui/components/dialog";
-import { WindowChrome, EASE } from "./shared";
+import { BuildDemo } from "./build-demo";
+import { RotatingWord } from "./effects";
+import { Container, CtaButton, MaskHeading, Reveal } from "./shared";
+
+// three.js loads in its own chunk, after the first paint.
+const SignalField = React.lazy(() => import("./signal-field"));
 
 const DEMO_VIDEO_URL =
   "https://player.cloudinary.com/embed/?cloud_name=dzf9kamfw&public_id=Screencast_from_2026-09-04_19-44-52_v9yxns";
+
+const BUILDS = [
+  "a SaaS.",
+  "a dashboard.",
+  "a landing page.",
+  "an internal tool.",
+  "a CRM.",
+];
+
+const PIPELINE = ["Prompt", "AI agent", "Sandbox", "Working app"];
+
+const STACK = [
+  "React",
+  "TypeScript",
+  "Vite",
+  "Tailwind CSS",
+  "shadcn/ui",
+  "Node.js",
+  "npm",
+  "Git",
+  "GitHub",
+];
 
 export function Hero() {
   const [videoOpen, setVideoOpen] = React.useState(false);
 
   return (
-    <section
-      id="product"
-      className="relative flex flex-col items-center overflow-hidden px-6 pt-40 pb-20 text-center"
-    >
-      {/* DotField/ColorBends need `position: absolute` forced via inline
-          style, not className — their own bundled .css sets `position:
-          relative` on the same class Tailwind's `absolute` targets, and
-          that stylesheet wins the cascade over the utility class. */}
+    <section id="product" className="relative overflow-x-clip pt-32 sm:pt-40">
+      {/* Background: CSS dots first, the WebGL field on top once it loads. */}
       <div
-        className="absolute inset-0 -z-10"
-        style={{ position: "absolute", inset: 0 }}
+        className="pointer-events-none absolute inset-x-0 top-0 h-[820px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_30%,black,transparent)]"
+        aria-hidden="true"
       >
-        <div style={{ position: "absolute", inset: 0 }}>
-          {/* <DotField
-            dotRadius={1.2}
-            dotSpacing={16}
-            cursorRadius={480}
-            bulgeOnly
-            bulgeStrength={50}
-            glowRadius={180}
-            gradientFrom="rgba(113, 113, 122, 0.35)"
-            gradientTo="rgba(113, 113, 122, 0.12)"
-            glowColor="rgba(161, 161, 170, 0.5)"
-          /> */}
-        </div>
-        {/* <ColorBends
-          colors={["#71717a", "#a1a1aa", "#52525b"]}
-          speed={0.12}
-          scale={2}
-          frequency={2.5}
-          intensity={1}
-          warpStrength={1}
-          noise={0.08}
-          mouseInfluence={0.6}
-          style={{ position: "absolute", inset: 0, opacity: 0.55 }}
-        /> */}
+        <div className="absolute inset-0 dot-grid opacity-40" />
+        <React.Suspense fallback={null}>
+          <SignalField className="absolute inset-0" />
+        </React.Suspense>
+        <div className="absolute top-24 left-1/2 h-[340px] w-[760px] -translate-x-1/2 rounded-full bg-acid/[0.07] blur-[100px]" />
       </div>
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-background via-background/70 to-background" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[600px] bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,color-mix(in_oklch,var(--color-foreground),transparent_92%),transparent)]" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: EASE }}
-        className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-foreground/[0.03] px-4 py-1.5 text-sm text-muted-foreground"
-      >
-        <Sparkles className="size-3.5 text-foreground" />
-        Your AI software engineer, in its own dev environment
-      </motion.div>
+      <Container className="relative">
+        <div className="flex flex-col items-center text-center">
+          <Reveal>
+            <a
+              href="#how-it-works"
+              className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] py-1 pr-3 pl-1 text-[13px] text-mute backdrop-blur transition-colors hover:border-white/20 hover:text-white"
+            >
+              <span className="rounded-full bg-acid px-2 py-0.5 font-code text-[11px] font-medium text-void">
+                Agent
+              </span>
+              Your AI software engineer, in its own dev environment
+              <ArrowRight
+                className="size-[13px] transition-transform group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </a>
+          </Reveal>
 
-      <motion.h1
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.08, ease: EASE }}
-        className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-6xl"
-      >
-        Build and ship apps with AI.
-      </motion.h1>
+          <MaskHeading
+            as="h1"
+            lines={[
+              "Describe it.",
+              <RotatingWord
+                key="rotating"
+                prefix="Ship"
+                words={BUILDS}
+                className="font-display-serif font-normal tracking-[-0.02em] text-acid italic"
+              />,
+            ]}
+            className="mt-8 text-[clamp(44px,7.4vw,92px)] leading-[0.98] tracking-[-0.05em] text-white"
+          />
 
-      <motion.p
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.16, ease: EASE }}
-        className="mt-6 max-w-2xl text-lg text-balance text-muted-foreground"
-      >
-        Describe what you want to build. Your AI agent plans, codes, runs,
-        debugs, and tests it inside a real sandbox — then gives you a working
-        application.
-      </motion.p>
+          <Reveal delay={0.2}>
+            <p className="mx-auto mt-7 max-w-[56ch] text-[17px] leading-relaxed text-mute">
+              Your AI agent plans, codes, runs, debugs and tests it inside a
+              real sandbox — then hands you a working application.
+            </p>
+          </Reveal>
+          <Reveal
+            delay={0.3}
+            className="mt-9 flex flex-wrap justify-center gap-3"
+          >
+            <CtaButton to="/dashboard">Start building for free</CtaButton>
+            <CtaButton
+              variant="outline"
+              arrow={false}
+              onClick={() => setVideoOpen(true)}
+            >
+              <PlayCircle className="size-4" aria-hidden="true" />
+              Watch how it works
+            </CtaButton>
+          </Reveal>
+          <Reveal delay={0.4}>
+            <p className="mt-5 font-code text-[12px] text-dim">
+              No setup · A real sandbox per project · Export your code anytime
+            </p>
+          </Reveal>
+        </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.24, ease: EASE }}
-        className="mt-10 flex flex-wrap items-center justify-center gap-4"
-      >
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.05)] transition-transform hover:scale-[1.03] active:scale-[0.98] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
-        >
-          Start building for free
-          <ArrowRight className="size-4" />
-        </Link>
-        <button
-          type="button"
-          onClick={() => setVideoOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-foreground/90 transition-colors hover:bg-foreground/5"
-        >
-          <PlayCircle className="size-4" />
-          Watch how it works
-        </button>
-      </motion.div>
+        <BuildDemo />
+
+        <Reveal className="mt-8 flex flex-wrap items-center justify-center gap-2 font-code text-[12px] text-mute">
+          {PIPELINE.map((step, i) => (
+            <React.Fragment key={step}>
+              <span
+                className={
+                  i === PIPELINE.length - 1
+                    ? "rounded-full border border-acid/30 bg-acid/10 px-3 py-1 text-acid"
+                    : "rounded-full border border-white/10 bg-white/[0.03] px-3 py-1"
+                }
+              >
+                {step}
+              </span>
+              {i < PIPELINE.length - 1 ? (
+                <ArrowRight className="size-3 text-dim" aria-hidden="true" />
+              ) : null}
+            </React.Fragment>
+          ))}
+        </Reveal>
+      </Container>
+
+      <div className="relative mt-20 border-y border-white/[0.06] py-10">
+        <p className="text-center text-[13px] text-dim">
+          Writes real code with the tools you already use
+        </p>
+        <div className="mt-6 overflow-hidden fade-x">
+          <ul className="flex w-max animate-marquee gap-14 pr-14">
+            {[...STACK, ...STACK].map((name, i) => (
+              <li
+                key={i}
+                aria-hidden={i >= STACK.length}
+                className="flex items-center gap-2 text-[19px] font-semibold tracking-[-0.03em] whitespace-nowrap text-white/35"
+              >
+                <span className="text-[13px] text-acid/60">◆</span>
+                {name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
       <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
         <DialogContent className="w-[90vw] max-w-5xl p-0 sm:max-w-5xl">
@@ -125,36 +169,6 @@ export function Hero() {
           </div>
         </DialogContent>
       </Dialog>
-
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.35, ease: EASE }}
-        className="relative mt-20 w-[70vw] max-w-[1600px] text-left"
-      >
-        <WindowChrome label="preview · localhost:3000">
-          <img
-            src="https://res.cloudinary.com/dzf9kamfw/image/upload/v1788531819/Screenshot_from_2026-09-04_19-46-29_acx9xa.png"
-            alt="App preview"
-            className="h-full w-full object-cover"
-          />
-        </WindowChrome>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 1.2 }}
-        className="mt-6 flex items-center gap-3 text-xs text-muted-foreground"
-      >
-        <span>Prompt</span>
-        <ArrowRight className="size-3" />
-        <span>AI Agent</span>
-        <ArrowRight className="size-3" />
-        <span>Sandbox</span>
-        <ArrowRight className="size-3" />
-        <span>Working App</span>
-      </motion.div>
     </section>
   );
 }

@@ -33,7 +33,9 @@ function LandingPage() {
       <div
         id="smooth-wrapper"
         ref={wrapperRef}
-        className="bg-background text-foreground"
+        // The landing page is always dark: `dark` makes the shared theme
+        // tokens resolve to their dark values for everything inside it.
+        className="dark bg-void text-white/90 antialiased"
       >
         <main id="smooth-content" ref={contentRef}>
           {/* <SplashCursor
@@ -51,9 +53,9 @@ function LandingPage() {
           <Hero />
           {/* <TrustBar /> */}
           {/* <LiveDemo /> */}
+          <Capabilities />
           <HowItWorks />
           <SandboxSection />
-          <Capabilities />
           <ErrorFixShowcase />
           {/* <Lifecycle /> */}
           {/* <Templates /> */}

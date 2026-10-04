@@ -4,6 +4,7 @@ export type AgentEvent =
   | { type: "session_ready"; sessionId: string }
   | { type: "sandbox_ready"; sessionId: string; previewUrl: string }
   | { type: "token"; delta: string }
+  | { type: "reasoning_token"; delta: string }
   | { type: "step_start"; step: number }
   | { type: "tool_start"; step: number; tool: ToolName; args: unknown }
   | {

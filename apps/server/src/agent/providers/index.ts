@@ -26,6 +26,7 @@ const nvidiaProvider = createOpenAICompatProvider({
   headers: {
     Authorization: `Bearer ${NVIDIA_API_KEY}`,
   },
+  thinking: true,
 });
 
 const nvidiaLightningProvider = createOpenAICompatProvider({
@@ -35,6 +36,7 @@ const nvidiaLightningProvider = createOpenAICompatProvider({
   headers: {
     Authorization: `Bearer ${NVIDIA_API_KEY}`,
   },
+  thinking: true,
 });
 
 const groqProvider = createOpenAICompatProvider({

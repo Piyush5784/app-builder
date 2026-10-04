@@ -21,6 +21,7 @@ interface OpenAIStreamToolCallDelta {
 
 interface OpenAIStreamDelta {
   content?: string | null;
+  reasoning_content?: string | null;
   tool_calls?: OpenAIStreamToolCallDelta[];
 }
 
@@ -86,6 +87,7 @@ export interface OpenAICompatOptions {
   headers?: Record<string, string>;
   model: string;
   maxAttempts?: number;
+  thinking?: boolean;
 }
 
 interface StreamToolCallAccumulator {
@@ -94,13 +96,6 @@ interface StreamToolCallAccumulator {
   arguments: string;
 }
 
-/**
- * WHY:
- * Mutated by `requestOnceStreaming` so the retry loop in `chat()` can tell,
- * even after a thrown error, whether any text already reached the user —
- * once true, retrying would duplicate/garble what they've already seen, so
- * that attempt's failure becomes final instead of retried.
- */
 interface StreamState {
   startedEmitting: boolean;
 }
@@ -109,7 +104,8 @@ async function requestOnceStreaming(
   options: OpenAICompatOptions,
   body: string,
   signal: AbortSignal | undefined,
-  onToken: ((delta: string) => void) | undefined,
+  onToken:
+    ((delta: string, kind?: "content" | "reasoning") => void) | undefined,
   state: StreamState,
 ): Promise<ProviderResponse> {
   const res = await fetch(options.url, {
@@ -133,6 +129,7 @@ async function requestOnceStreaming(
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
+  let reasoning = "";
   let tokensIn: number | undefined;
   let tokensOut: number | undefined;
   const toolCallsByIndex = new Map<number, StreamToolCallAccumulator>();
@@ -166,7 +163,13 @@ async function requestOnceStreaming(
     if (delta.content) {
       content += delta.content;
       state.startedEmitting = true;
-      onToken?.(delta.content);
+      onToken?.(delta.content, "content");
+    }
+
+    if (delta.reasoning_content) {
+      reasoning += delta.reasoning_content;
+      state.startedEmitting = true;
+      onToken?.(delta.reasoning_content, "reasoning");
     }
 
     for (const tc of delta.tool_calls ?? []) {
@@ -214,7 +217,13 @@ async function requestOnceStreaming(
         "model put tool call(s) in content instead of tool_calls, recovered",
         { recoveredCount: recovered.length },
       );
-      return { content: null, toolCalls: recovered, tokensIn, tokensOut };
+      return {
+        content: null,
+        reasoning: reasoning || undefined,
+        toolCalls: recovered,
+        tokensIn,
+        tokensOut,
+      };
     }
 
     if (/<tool_call>|<function=/.test(content)) {
@@ -224,18 +233,15 @@ async function requestOnceStreaming(
     }
   }
 
-  return { content: content || null, toolCalls, tokensIn, tokensOut };
+  return {
+    content: content || null,
+    reasoning: reasoning || undefined,
+    toolCalls,
+    tokensIn,
+    tokensOut,
+  };
 }
 
-/**
- * Any provider that speaks the OpenAI chat-completions wire format (OpenRouter,
- * Ollama's /v1 endpoint, NVIDIA's NIM endpoint, etc.) is the same client with
- * a different URL/headers/model — so it's one factory, not one file per
- * provider. Always requests a stream so replies can be shown token-by-token;
- * the parsing above still accumulates the full `ProviderResponse` shape the
- * agent's tool-call loop needs — streaming is a side effect on top of that,
- * not a separate request.
- */
 export function createOpenAICompatProvider(
   options: OpenAICompatOptions,
 ): LLMProvider {
@@ -252,6 +258,9 @@ export function createOpenAICompatProvider(
         temperature: 0.2,
         stream: true,
         stream_options: { include_usage: true },
+        ...(options.thinking && {
+          chat_template_kwargs: { thinking: true },
+        }),
       });
 
       const maxAttempts = options.maxAttempts ?? 3;
