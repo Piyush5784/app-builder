@@ -6,7 +6,6 @@ interface Hsl {
   l: number;
 }
 
-/** Normalizes any valid CSS color (name, hex, rgb, hsl...) to RGB via the browser's own parser. */
 function cssColorToRgb(color: string): [number, number, number] {
   const probe = document.createElement("div");
   probe.style.color = color;
@@ -43,12 +42,6 @@ function rgbToHsl(r: number, g: number, b: number): Hsl {
   return { h: h * 60, s: s * 100, l: l * 100 };
 }
 
-/**
- * Generates `count` tonal variants of a single base color — a pale, nearly
- * white tint through to a deep, fully-saturated accent of the same hue —
- * instead of assigning particles unrelated colors. Deterministic per base
- * hue so the palette doesn't reshuffle across re-renders.
- */
 export function generateColorVariants(
   baseColor: string,
   count: number,

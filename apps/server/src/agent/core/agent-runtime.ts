@@ -24,29 +24,10 @@ export interface AgentResult {
   previewUrl: string;
 }
 
-/**
- * WHY:
- * A cheap, non-atomic pre-check used only to fail fast (skip opening a
- * sandbox, skip a step's LLM call) before an amount is actually spent. It is
- * not the enforcement point — every model's real cost is only known after
- * the call (token-based), so there's no atomic pre-call guard possible; this
- * balance > 0 check is just the best available signal upfront, same as how
- * usage-metered APIs (OpenAI, Anthropic) gate on remaining balance/quota
- * before a call and meter the actual cost afterward.
- */
 async function hasSufficientCredits(userId: string): Promise<boolean> {
   return (await persistence.credits.getUserCredits(userId)) > 0;
 }
 
-/**
- * WHY:
- * Core loop of the agent: send messages to the LLM, get tool calls, execute
- * them, and repeat until done or cancelled.
- * DB writes per step: LLMCall, then per tool call: ToolInvocation;
- * User.credits + CreditTransaction (persistence.credits.deductCredits) once
- * per successful LLM call, priced from actual token usage. AgentEvent only
- * on the step-limit warning.
- */
 async function runLoop(
   sessionId: string,
   runId: string,
@@ -82,8 +63,12 @@ async function runLoop(
     let result: Awaited<ReturnType<LLMProvider["chat"]>>;
 
     try {
-      result = await provider.chat(messages, tools, signal, (delta) =>
-        emit({ type: "token", delta }),
+      result = await provider.chat(messages, tools, signal, (delta, kind) =>
+        emit(
+          kind === "reasoning"
+            ? { type: "reasoning_token", delta }
+            : { type: "token", delta },
+        ),
       );
     } catch (error) {
       await persistence.llmCalls.create({
@@ -148,6 +133,7 @@ async function runLoop(
         prompt: promptSnapshot as never,
         response: {
           content: result.content,
+          reasoning: result.reasoning,
           toolCalls: result.toolCalls,
         } as never,
         tokensIn: result.tokensIn,
@@ -250,16 +236,6 @@ function truncateSessionName(name: string): string {
   return `${trimmed.slice(0, MAX_SESSION_NAME_LENGTH)}…`;
 }
 
-/**
- * WHY:
- * Core brain of the agent: orchestrates the session, LLM provider, and tool
- * execution loop, handling errors and cancellations. The sandbox itself is
- * opened lazily by the guardrail passed into runLoop, not here — a run
- * that never calls a real tool never creates one.
- * DB writes: AgentSession (created via ensureSessionExists on the very
- * first message, name set if new), AgentRun (create, then update with the
- * result), plus whatever runLoop and the guardrail write.
- */
 export async function runAgent(
   sessionId: string,
   userPrompt: string,

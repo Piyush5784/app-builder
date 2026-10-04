@@ -1,7 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { cn } from "@package/ui/lib/utils";
-import { GlowCard, Reveal, Section, SectionHeading } from "./shared";
+import {
+  Container,
+  H2,
+  MaskHeading,
+  Reveal,
+  SectionHeader,
+  Spotlight,
+} from "./shared";
 
 const PLANS = [
   {
@@ -55,70 +62,91 @@ const PLANS = [
 
 export function Pricing() {
   return (
-    <Section id="pricing">
-      <SectionHeading
-        kicker="Pricing"
-        title="Simple pricing that scales with you."
-        description="AI credits, sandbox usage, and deployments — all included at every tier."
-      />
+    <section id="pricing" className="scroll-mt-20 pb-24 sm:pb-32">
+      <Container>
+        <SectionHeader
+          eyebrow="Pricing"
+          copy="AI credits, sandbox usage and deployments — included at every tier."
+          title={
+            <MaskHeading
+              lines={["Simple pricing that", "scales with you."]}
+              accentFrom={1}
+              className={H2}
+            />
+          }
+        />
 
-      <div className="mt-14 grid gap-6 lg:grid-cols-3">
-        {PLANS.map((plan, i) => (
-          <Reveal key={plan.name} delay={i * 0.1}>
-            <GlowCard
-              className={cn(
-                "flex h-full flex-col p-6",
-                plan.featured &&
-                  "border-foreground/25 bg-foreground/[0.04] shadow-[0_0_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_0_60px_-15px_rgba(255,255,255,0.15)]",
-              )}
-            >
-              {plan.featured ? (
-                <span className="mb-4 w-fit rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground">
-                  Most popular
-                </span>
-              ) : null}
-              <h3 className="text-lg font-medium text-foreground">
-                {plan.name}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {plan.description}
-              </p>
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-semibold tracking-tight text-foreground">
-                  {plan.price}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {plan.period}
-                </span>
-              </div>
-
-              <ul className="mt-6 flex-1 space-y-3">
-                {plan.features.map((f) => (
-                  <li
-                    key={f}
-                    className="flex items-start gap-2 text-sm text-foreground/65"
-                  >
-                    <Check className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                to="/dashboard"
+        <div className="mt-14 grid gap-4 lg:grid-cols-3 lg:items-stretch">
+          {PLANS.map((plan, i) => (
+            <Reveal key={plan.name} delay={i * 0.1} className="h-full">
+              <Spotlight
                 className={cn(
-                  "mt-8 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-transform hover:scale-[1.02] active:scale-[0.98]",
-                  plan.featured
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border text-foreground/85 hover:bg-foreground/5",
+                  "flex h-full flex-col p-7",
+                  plan.featured &&
+                    "border-acid/35 bg-[linear-gradient(180deg,rgba(200,255,61,0.08),rgba(255,255,255,0.01))] shadow-[0_0_80px_-30px_rgba(200,255,61,0.5)]",
                 )}
               >
-                {plan.cta}
-              </Link>
-            </GlowCard>
-          </Reveal>
-        ))}
-      </div>
-    </Section>
+                <div className="relative flex items-center justify-between">
+                  <h3 className="text-[18px] font-medium text-white">
+                    {plan.name}
+                  </h3>
+                  {plan.featured ? (
+                    <span className="rounded-full bg-acid px-2.5 py-0.5 font-code text-[11px] font-medium text-void">
+                      Most popular
+                    </span>
+                  ) : null}
+                </div>
+                <p className="relative mt-1 text-[14px] text-mute">
+                  {plan.description}
+                </p>
+                <div className="relative mt-7 flex items-baseline gap-1">
+                  <span className="text-[48px] leading-none font-medium tracking-[-0.05em] text-white">
+                    {plan.price}
+                  </span>
+                  <span className="text-[14px] text-dim">{plan.period}</span>
+                </div>
+
+                <ul className="relative mt-7 flex-1 space-y-3 border-t border-white/[0.07] pt-6">
+                  {plan.features.map((f) => (
+                    <li
+                      key={f}
+                      className="flex items-start gap-2.5 text-[14px] text-white/75"
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full",
+                          plan.featured
+                            ? "bg-acid text-void"
+                            : "bg-white/10 text-white/80",
+                        )}
+                      >
+                        <Check
+                          className="size-2.5"
+                          strokeWidth={3.5}
+                          aria-hidden="true"
+                        />
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <Link
+                  to="/dashboard"
+                  className={cn(
+                    "relative mt-8 inline-flex h-11 items-center justify-center rounded-full px-4 text-[14px] font-medium transition-colors",
+                    plan.featured
+                      ? "bg-acid text-void hover:bg-[#d6ff6b]"
+                      : "border border-white/15 bg-white/[0.03] text-white hover:border-white/30 hover:bg-white/[0.06]",
+                  )}
+                >
+                  {plan.cta}
+                </Link>
+              </Spotlight>
+            </Reveal>
+          ))}
+        </div>
+      </Container>
+    </section>
   );
 }

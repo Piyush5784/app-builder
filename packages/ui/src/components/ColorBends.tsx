@@ -195,13 +195,6 @@ export default function ColorBends({
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    // WebGL context creation can fail (hardware acceleration disabled,
-    // GPU driver blocklisted, too many contexts already open, running in a
-    // VM/remote desktop) — most commonly reported in Chrome since that's
-    // where these conditions show up most. Three.js throws synchronously
-    // from the constructor in that case; with no try/catch here and no
-    // error boundary in the app, that exception was crashing the whole
-    // page instead of just skipping this decorative effect.
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({

@@ -10,11 +10,6 @@ export function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-/**
- * Deterministic PRNG (mulberry32). Used so every particle's "random" characteristics
- * (color, size, phase, noise offset...) are stable across re-renders instead of
- * re-rolling on every render, which would make the field flicker/reshuffle.
- */
 export function mulberry32(seed: number): () => number {
   let a = seed | 0;
   return function random() {
@@ -28,12 +23,6 @@ export function mulberry32(seed: number): () => number {
 export function randRange(rng: () => number, min: number, max: number): number {
   return min + rng() * (max - min);
 }
-
-// ---------------------------------------------------------------------------
-// Lightweight seeded 3D gradient noise (classic-Perlin style). Self-contained,
-// no dependency, deterministic across reloads. Used for the organic
-// "never perfectly still" drift and for the blob shape's surface distortion.
-// ---------------------------------------------------------------------------
 
 const PERM: Uint8Array = (() => {
   const p = new Uint8Array(256);
@@ -61,7 +50,6 @@ function gradient(hash: number, x: number, y: number, z: number): number {
   return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
 }
 
-/** Returns a value roughly in [-1, 1], smoothly varying with x, y, z. */
 export function noise3D(x: number, y: number, z: number): number {
   const X = Math.floor(x) & 255;
   const Y = Math.floor(y) & 255;

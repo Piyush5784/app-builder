@@ -54,6 +54,7 @@ web-builder.pem
 # typescript
 *.tsbuildinfo
 
+nao
 # old/client (tanstack router generated files/cache)
 old/client/src/routeTree.gen.ts
 old/client/.tanstack

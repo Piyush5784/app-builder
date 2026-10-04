@@ -47,7 +47,7 @@ function AuthLayout() {
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Sparkles className="size-4" />
             </div>
-            Unite
+            Wb
           </Link>
           <div className="w-full max-w-md rounded-2xl p-8">
             <Outlet />

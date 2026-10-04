@@ -12,8 +12,6 @@ export default defineConfig([
       globals: globals.node,
     },
     rules: {
-      // Express error-handling middleware is detected by arity (err, req, res, next)
-      // — unused params in that signature are structural, not a mistake.
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_" },

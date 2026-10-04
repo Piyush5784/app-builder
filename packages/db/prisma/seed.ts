@@ -3,10 +3,6 @@ import { prisma } from "../src/prisma";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 
-// Minimal auth instance for seeding only — just enough for `signUpEmail` to
-// properly hash passwords and create matching Account rows. The full app
-// config (Google OAuth, email verification, etc.) lives in apps/server's
-// lib/auth.ts and isn't needed here.
 const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: { enabled: true },

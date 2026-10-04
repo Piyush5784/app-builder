@@ -86,11 +86,6 @@ async function executeTool(sandbox: Sandbox, call: ToolCall): Promise<string> {
   }
 }
 
-/**
- * Re-runs a recorded sequence of mutating tool calls against a fresh sandbox,
- * in order, to rebuild the state a dead sandbox had. Used when a session's
- * sandbox died (idle timeout, crash) and a new one was just created.
- */
 async function replayEvents(
   sandbox: Sandbox,
   calls: ToolCall[],

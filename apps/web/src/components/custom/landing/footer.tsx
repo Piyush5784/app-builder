@@ -1,71 +1,91 @@
-import { Terminal } from "lucide-react";
+import { BRAND, Logo } from "./brand";
+import { Container } from "./shared";
 
 const COLUMNS = [
   {
     title: "Product",
-    links: ["Features", "Templates", "Pricing", "Docs"],
+    links: [
+      { label: "Features", href: "#capabilities" },
+      { label: "How it works", href: "#how-it-works" },
+      { label: "Pricing", href: "#pricing" },
+      { label: "FAQ", href: "#faq" },
+    ],
   },
   {
     title: "Platform",
-    links: ["GitHub", "Security"],
+    links: [
+      { label: "GitHub", href: "#" },
+      { label: "Security", href: "#" },
+    ],
   },
   {
     title: "Legal",
-    links: ["Privacy", "Terms"],
+    links: [
+      { label: "Privacy", href: "#" },
+      { label: "Terms", href: "#" },
+    ],
   },
   {
     title: "Company",
-    links: ["Contact"],
+    links: [{ label: "Contact", href: "#" }],
   },
 ];
 
 export function Footer() {
   return (
-    <footer className="border-t border-border px-6 py-16">
-      <div className="mx-auto max-w-6xl">
-        <div className="grid gap-10 lg:grid-cols-[1.5fr_repeat(4,1fr)]">
+    <footer className="relative overflow-hidden border-t border-white/[0.06]">
+      <Container className="pt-16">
+        <div className="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
           <div>
-            <a href="#" className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <Terminal className="size-4" />
-              </span>
-              <span className="text-sm font-semibold tracking-tight text-foreground">
-                Unite
-              </span>
-            </a>
-            <p className="mt-4 max-w-xs text-sm text-muted-foreground">
+            <Logo />
+            <p className="mt-4 max-w-[30ch] text-[14px] leading-relaxed text-mute">
               Describe it. AI builds it. Ship it.
             </p>
+            <span className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-[12px] text-mute">
+              <span className="relative flex size-2">
+                <span className="absolute inset-0 animate-ping rounded-full bg-acid/70" />
+                <span className="relative size-2 rounded-full bg-acid" />
+              </span>
+              Sandboxes online
+            </span>
           </div>
-
-          {COLUMNS.map((col) => (
-            <div key={col.title}>
-              <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {col.title}
-              </h4>
-              <ul className="mt-4 space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="text-sm text-foreground/55 transition-colors hover:text-foreground"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-4">
+            {COLUMNS.map((col) => (
+              <div key={col.title}>
+                <p className="text-[13px] font-medium text-white">
+                  {col.title}
+                </p>
+                <ul className="mt-4 flex flex-col gap-2.5 text-[14px]">
+                  {col.links.map((link) => (
+                    <li key={link.label}>
+                      <a
+                        href={link.href}
+                        className="text-mute transition-colors hover:text-white"
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
+      </Container>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 text-xs text-muted-foreground sm:flex-row">
-          <span>
-            © {new Date().getFullYear()} Forgeframe. All rights reserved.
-          </span>
-          <span>Built for developers who ship.</span>
-        </div>
-      </div>
+      <p
+        aria-hidden="true"
+        className="pointer-events-none mt-10 bg-[linear-gradient(180deg,rgba(200,255,61,0.22),rgba(255,255,255,0.04)_55%,transparent_85%)] bg-clip-text text-center text-[34vw] leading-[0.8] font-semibold tracking-[-0.07em] whitespace-nowrap text-transparent select-none [-webkit-text-stroke:1px_rgba(255,255,255,0.16)]"
+      >
+        {BRAND}
+      </p>
+
+      <Container className="relative flex flex-col gap-3 border-t border-white/[0.06] py-6 text-[12px] text-dim sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          © {new Date().getFullYear()} {BRAND}. All rights reserved.
+        </p>
+        <p>Built for developers who ship.</p>
+      </Container>
     </footer>
   );
 }

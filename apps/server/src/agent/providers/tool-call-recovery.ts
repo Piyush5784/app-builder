@@ -34,15 +34,6 @@ export function extractJsonObjects(text: string): string[] {
   return objects;
 }
 
-/**
- * WHY:
- * Some models (observed with NVIDIA Nemotron) emit tool calls as this
- * pseudo-XML instead of clean JSON:
- *   <tool_call> <function=listFiles> <parameter=path> src </parameter> </function> </tool_call>
- * One <function=...> block per call, zero or more <parameter=key>value</parameter>
- * children inside it. Extracted separately from extractJsonObjects since this
- * isn't JSON at all.
- */
 function extractXmlFunctionCalls(content: string): ToolCall[] {
   const calls: ToolCall[] = [];
   const functionRe = /<function=([^>]+)>([\s\S]*?)<\/function>/g;

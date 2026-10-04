@@ -18,8 +18,6 @@ import {
   ChevronDownIcon,
 } from "lucide-react";
 
-// The bar above the preview/code panel — view toggle, sandbox refresh +
-// preview URL, and the download/share actions.
 export function WorkspaceToolbar({
   view,
   setView,

@@ -11,8 +11,6 @@ const EXAMPLE_PROMPTS = [
   "A dashboard with a sidebar and a table of recent orders",
 ];
 
-// The empty-state screen shown for a session that hasn't sent its first
-// prompt yet — replaced by the chat/workspace views once it has.
 export function ChatInput({
   prompt,
   setPrompt,

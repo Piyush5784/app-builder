@@ -12,14 +12,6 @@ export type { ProviderName } from "@/agent/providers";
 export type { FileTreeNode } from "@/agent/sandbox";
 export type { ModelOption } from "@/agent/models";
 
-/**
- * WHY:
- * Single entry point for every agent subsystem, one namespace per subfolder
- * (agent.core, agent.persistence, agent.sandbox, agent.providers, agent.tools,
- * agent.telemetry, agent.models, agent.guardrails) — callers read as
- * `agent.core.runAgent(...)`, `agent.persistence.credits.deductCredits(...)`,
- * `agent.sandbox.manager.getOrCreateSandbox(...)`.
- */
 export const agent = {
   core,
   persistence,

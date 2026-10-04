@@ -1,15 +1,13 @@
 import type { Point3D, ShapeName } from "@/types/particle-morph";
 import { mulberry32, randRange, noise3D } from "@/utils/particle-math";
 
-/** Golden angle, in radians — gives an even, non-clumping distribution over a sphere/disc. */
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-/** Fibonacci sphere: evenly distributes `count` points over a sphere's surface. */
 export function generateSphere(count: number, radius: number): Point3D[] {
   const pts: Point3D[] = [];
   const denom = Math.max(1, count - 1);
   for (let i = 0; i < count; i++) {
-    const y = 1 - (i / denom) * 2; // -1..1
+    const y = 1 - (i / denom) * 2;
     const r = Math.sqrt(Math.max(0, 1 - y * y));
     const theta = GOLDEN_ANGLE * i;
     pts.push({
@@ -21,7 +19,6 @@ export function generateSphere(count: number, radius: number): Point3D[] {
   return pts;
 }
 
-/** Vogel/sunflower disc packing, flattened onto the z≈0 plane. */
 export function generateCircle(count: number, radius: number): Point3D[] {
   const pts: Point3D[] = [];
   for (let i = 0; i < count; i++) {
@@ -36,7 +33,6 @@ export function generateCircle(count: number, radius: number): Point3D[] {
   return pts;
 }
 
-/** Uniformly scatters points across the six faces of a cube. */
 export function generateCube(
   count: number,
   radius: number,
@@ -89,14 +85,13 @@ export function generateCube(
   return pts;
 }
 
-/** Torus via major/minor radius parametric equations. */
 export function generateTorus(count: number, radius: number): Point3D[] {
   const pts: Point3D[] = [];
-  const R = radius * 0.65; // distance from torus center to tube center
-  const r = radius * 0.28; // tube radius
+  const R = radius * 0.65;
+  const r = radius * 0.28;
   for (let i = 0; i < count; i++) {
-    const theta = GOLDEN_ANGLE * i; // around the main ring
-    const phi = i * 2.399963 * 1.9; // around the tube cross-section
+    const theta = GOLDEN_ANGLE * i;
+    const phi = i * 2.399963 * 1.9;
     pts.push({
       x: (R + r * Math.cos(phi)) * Math.cos(theta),
       y: r * Math.sin(phi),
@@ -106,7 +101,6 @@ export function generateTorus(count: number, radius: number): Point3D[] {
   return pts;
 }
 
-/** Expanding helix from center outward. */
 export function generateSpiral(count: number, radius: number): Point3D[] {
   const pts: Point3D[] = [];
   const turns = 5;
@@ -123,7 +117,6 @@ export function generateSpiral(count: number, radius: number): Point3D[] {
   return pts;
 }
 
-/** Sin/cos interference surface sampled on a grid. */
 export function generateWave(count: number, radius: number): Point3D[] {
   const pts: Point3D[] = [];
   const gridSize = Math.ceil(Math.sqrt(count));
@@ -143,7 +136,6 @@ export function generateWave(count: number, radius: number): Point3D[] {
   return pts;
 }
 
-/** Noise-perturbed sphere — an organic, non-uniform "liquid blob". */
 export function generateBlob(
   count: number,
   radius: number,
@@ -160,7 +152,6 @@ export function generateBlob(
   });
 }
 
-/** Classic parametric heart curve, filled solid via randomized concentric layers. */
 export function generateHeart(
   count: number,
   radius: number,
@@ -170,7 +161,7 @@ export function generateHeart(
   const pts: Point3D[] = [];
   const scale = radius / 18;
   for (let i = 0; i < count; i++) {
-    const layer = randRange(rng, 0.25, 1); // fills the interior, not just the outline
+    const layer = randRange(rng, 0.25, 1);
     const t = randRange(rng, 0, Math.PI * 2);
     const x = 16 * Math.pow(Math.sin(t), 3);
     const y =
@@ -187,7 +178,6 @@ export function generateHeart(
   return pts;
 }
 
-/** Logarithmic spiral arms, with a small fraction scattered as free "field stars". */
 export function generateGalaxy(
   count: number,
   radius: number,
@@ -196,7 +186,7 @@ export function generateGalaxy(
   const rng = mulberry32(seed);
   const pts: Point3D[] = [];
   const arms = 3;
-  const b = 0.28; // spiral tightness
+  const b = 0.28;
   for (let i = 0; i < count; i++) {
     const scattered = rng() < 0.12;
     const t = randRange(rng, 0, 3.2);
@@ -216,7 +206,6 @@ export function generateGalaxy(
   return pts;
 }
 
-/** Uniform random fill of the sphere's volume — used as a "chaos" shape. */
 export function generateRandom(
   count: number,
   radius: number,
@@ -228,7 +217,7 @@ export function generateRandom(
     const u = rng();
     const v = rng();
     const w = rng();
-    const r = radius * Math.cbrt(u); // cube root keeps the fill volumetrically uniform
+    const r = radius * Math.cbrt(u);
     const theta = 2 * Math.PI * v;
     const phi = Math.acos(2 * w - 1);
     pts.push({

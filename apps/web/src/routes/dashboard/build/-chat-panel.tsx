@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Textarea } from "@package/ui/components/textarea";
 import { Button } from "@package/ui/components/button";
 import { Spinner } from "@package/ui/components/spinner";
@@ -18,8 +19,12 @@ import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import type { ChatItem, ModelInfo } from "@/routes/dashboard/build/-types";
-import { ActivityRow } from "@/routes/dashboard/build/-activity-row";
+import {
+  ActivityGroup,
+  groupConsecutiveActivities,
+} from "@/routes/dashboard/build/-activity-group";
 import { ModelPicker } from "@/routes/dashboard/build/-model-picker";
+import { AssistantReasoning } from "@/routes/dashboard/build/-assistant-reasoning";
 const streamdownPlugins = { cjk, code, math, mermaid } as PluginConfig;
 
 export function ChatPanel({
@@ -47,6 +52,11 @@ export function ChatPanel({
   setSelectedModelId: (id: string) => void;
   credits: number;
 }) {
+  const groupedItems = React.useMemo(
+    () => groupConsecutiveActivities(items),
+    [items],
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {isLoadingHistory ? (
@@ -58,11 +68,21 @@ export function ChatPanel({
           <MessageScroller className="min-h-0 flex-1">
             <MessageScrollerViewport>
               <MessageScrollerContent className="px-4 py-4">
-                {items.map((item) => {
-                  if (item.kind === "activity") {
+                {groupedItems.map((item, index) => {
+                  if (item.kind === "activity-group") {
+                    return (
+                      <MessageScrollerItem key={`activity-group-${index}`}>
+                        <ActivityGroup activities={item.activities} />
+                      </MessageScrollerItem>
+                    );
+                  }
+                  if (item.kind === "reasoning") {
                     return (
                       <MessageScrollerItem key={item.id}>
-                        <ActivityRow activity={item.activity} />
+                        <AssistantReasoning
+                          content={item.content}
+                          isStreaming={item.isStreaming}
+                        />
                       </MessageScrollerItem>
                     );
                   }

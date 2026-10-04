@@ -1,9 +1,3 @@
-// One-off backfill: sessions created before the "first prompt becomes the
-// name" feature existed still have `name: null`, showing as "Session
-// <id-prefix>" in the sidebar. This fills them in from each session's
-// earliest AgentRun prompt, same truncation rule as new sessions get.
-//
-// Run from apps/server: bun run src/scripts/backfill-session-names.ts
 import { prisma } from "@package/db";
 import { agent } from "@/agent";
 

@@ -22,7 +22,6 @@ import {
   DialogTitle,
 } from "@package/ui/components/dialog";
 import { FcGoogle } from "react-icons/fc";
-// import { FaGithub } from "react-icons/fa";
 import {
   Card,
   CardContent,
@@ -80,13 +79,6 @@ export default function RegisterForm({
       setIsGoogleLoading(false);
     }
   }
-
-  // async function loginWithGithub() {
-  //   await signIn.social({
-  //     provider: "github",
-  //     callbackURL: `${FRONTEND_URL}/dashboard`,
-  //   });
-  // }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     mutate(

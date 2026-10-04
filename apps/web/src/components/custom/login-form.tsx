@@ -15,7 +15,6 @@ import {
 import { Button } from "@package/ui/components/button";
 import { Spinner } from "@package/ui/components/spinner";
 import { FcGoogle } from "react-icons/fc";
-// import { FaGithub } from "react-icons/fa";
 import {
   Card,
   CardContent,
@@ -142,13 +141,6 @@ export default function LoginForm({
       setIsGoogleLoading(false);
     }
   }
-
-  // async function LoginWithGithub() {
-  //   await signIn.social({
-  //     provider: "github",
-  //     callbackURL: `${FRONTEND_URL}/dashboard`,
-  //   });
-  // }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     mutate(values);

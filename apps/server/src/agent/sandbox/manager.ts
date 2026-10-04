@@ -28,23 +28,6 @@ export interface SandboxHandle {
   isNew: boolean;
 }
 
-/**
- * WHY:
- * No in-process cache — `AgentSession.sandboxId` + `lastActiveAt` in the DB
- * is the only source of truth for which E2B sandbox belongs to a session.
- * Any request can be served by any server process (no sticky routing, safe
- * to restart or run more than one instance) because nothing about a live
- * sandbox connection lives only in one process's memory.
- *
- * CONTEXT:
- * `Sandbox.connect(sandboxId)` reconnects to an already-running remote
- * sandbox by id — if it's died (idle timeout, crash) this throws and falls
- * through to creating a fresh one, same fallback the old in-memory version
- * had for a cached handle that stopped responding.
- *
- * DB writes: AgentSession — updateMany (lastActiveAt) on the warm reconnect
- * path, or upsert (create/refresh) once a new sandbox is up.
- */
 async function getOrCreateSandbox(
   sessionId: string,
   allowCreate: boolean,
@@ -118,20 +101,6 @@ async function updateSession(sessionId: string): Promise<void> {
   });
 }
 
-/**
- * WHY:
- * Vite's dev server (started once at sandbox boot) watches the filesystem
- * for changes, but writes made through E2B's file API don't reliably raise
- * the inotify events that watcher depends on — so it can keep serving stale
- * content indefinitely after the agent edits files. A full restart forces it
- * to re-read everything from disk; Vite's own HMR client then reloads the
- * preview automatically once it reconnects to the new process.
- *
- * CONTEXT:
- * Killing by port rather than by the tracked start-command pid, since `npm
- * run dev` spawns Vite as a child process and killing just the npm pid can
- * leave Vite itself still holding the port.
- */
 async function restartDevServer(sandbox: Sandbox): Promise<void> {
   try {
     await sandbox.commands.run(`fuser -k ${E2B_DEV_PORT}/tcp; sleep 0.3`, {
@@ -163,14 +132,6 @@ async function destroySandbox(sessionId: string): Promise<void> {
   }
 }
 
-/**
- * Gets or creates the session's sandbox and, if it's a fresh one, replays
- * its recorded events onto it. Shared by the agent loop and the plain
- * sandbox-reopen / file-browsing routes — no LLM call happens here.
- *
- * DB writes: AgentSession, via getOrCreateSandbox (see its own comment).
- * eventLog.getEvents only reads ToolInvocation here, never writes.
- */
 async function openSandbox(
   sessionId: string,
   allowCreate: boolean,
@@ -201,23 +162,6 @@ async function openSandbox(
   return { sandbox, previewUrl };
 }
 
-/**
- * Reopens a session's sandbox (creating + replaying it if the old one died)
- * and returns its preview URL plus that session's tool-invocation history.
- * No LLM call, no tool loop — just the sandbox.
- *
- * The frontend's code view needs a session's tool activity (to render the
- * chat-history activity rows, and to drive the preview pane's step list
- * while a sandbox is still booting) at the same time it needs the preview
- * URL — bundling both into this one response avoids the two firing as
- * separate round-trips that can visibly land at different times.
- *
- * This is also what the frontend's manual refresh button hits, so it
- * restarts the dev server every call — the same stale-preview problem
- * runAgent restarts for after a run (see its own comment) can show up here
- * too, and a manual refresh is exactly when the user is asking to force past
- * it, so the extra restart latency is expected rather than wasted.
- */
 async function getSandboxUrl(
   sessionId: string,
   userId: string,
@@ -265,11 +209,6 @@ async function getToolInvocations(
   return rows;
 }
 
-/**
- * The recursive file/folder listing behind the workspace's code view. Never
- * creates a sandbox for a session that doesn't exist — same reopen-only
- * semantics as getSandboxUrl.
- */
 async function listSandboxFiles(
   sessionId: string,
   userId: string,
@@ -278,7 +217,6 @@ async function listSandboxFiles(
   return fileTree.buildFileTree(sandbox);
 }
 
-/** Reads one file's content for the code view. Reopen-only, same as above. */
 async function readSandboxFile(
   sessionId: string,
   path: string,
@@ -289,19 +227,6 @@ async function readSandboxFile(
   return typeof content === "string" ? content : String(content);
 }
 
-/**
- * Writes one file's content from a manual edit in the code view — the user
- * correcting something the agent got wrong. Reopen-only, same as above:
- * this never creates a sandbox for a session that doesn't have one yet,
- * since there'd be nothing to edit.
- *
- * DB writes: ToolInvocation (source: "user") — recorded the same way an
- * agent-driven writeFile would be, with runId/llmCallId left null since no
- * agent run or LLM call backs this write. Required so eventLog.getEvents'
- * replay (see openSandbox above) picks the edit back up if the sandbox is
- * ever recreated — skipping this would make a saved manual fix silently
- * vanish on the next replay.
- */
 async function writeSandboxFile(
   sessionId: string,
   path: string,
@@ -352,11 +277,6 @@ function collectFilePaths(nodes: FileTreeNode[]): string[] {
   return paths;
 }
 
-/**
- * Zips every file in the sandbox for a single "download all" button. Reads
- * as raw bytes (not text) so binary files — images, fonts — don't get
- * corrupted by a text decode/re-encode round trip.
- */
 async function downloadSandboxZip(
   sessionId: string,
   userId: string,

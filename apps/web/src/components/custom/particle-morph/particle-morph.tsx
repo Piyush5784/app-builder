@@ -27,14 +27,12 @@ import type {
   ShapeName,
 } from "@/types/particle-morph";
 
-/** Flat, struct-of-arrays position buffer — avoids per-particle object allocation in the rAF loop. */
 interface PositionBuffer {
   x: Float32Array;
   y: Float32Array;
   z: Float32Array;
 }
 
-/** Number of tonal shades (pale tint -> deep accent) generated from the base color. */
 const COLOR_VARIANT_COUNT = 8;
 
 function pointsToBuffer(points: Point3D[]): PositionBuffer {
@@ -74,18 +72,8 @@ export function ParticleMorph({
   const radius = Math.min(width, height) * 0.32;
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Picked once per mount (lazy useState initializer, not on every render)
-  // so a 'random' base color doesn't reroll on unrelated re-renders or prop tweaks.
   const [randomHue] = useState(() => Math.floor(Math.random() * 360));
 
-  // ---------------------------------------------------------------------
-  // Static per-particle field: color sprite / size / brightness / personal
-  // float pattern, as struct-of-arrays (not an array of objects) so the
-  // per-frame loop below is a tight, monomorphic scan over contiguous
-  // typed-array memory instead of chasing object pointers 5000+ times/frame.
-  // Generated once per (count, size, base color) via a seeded RNG so it
-  // never "reshuffles" on unrelated re-renders.
-  // ---------------------------------------------------------------------
   const field = useMemo(() => {
     const n = particleCount;
     const baseSize = new Float32Array(n);
@@ -97,8 +85,6 @@ export function ParticleMorph({
     const seed = new Float32Array(n);
     const sprite: HTMLCanvasElement[] = new Array(n);
 
-    // Every particle is a tonal variant of one hue — never an unrelated
-    // random color — so the field always reads as a single-color blob.
     const baseColor =
       particleColor.toLowerCase() === "random"
         ? `hsl(${randomHue}, 75%, 55%)`
@@ -131,8 +117,6 @@ export function ParticleMorph({
     };
   }, [particleCount, particleSize, particleColor, glow, randomHue]);
 
-  // Mutable position buffers for the morph interpolation. Never placed in
-  // React state — only ever read/written inside the animation loop.
   const currentPos = useRef<PositionBuffer>({
     x: new Float32Array(0),
     y: new Float32Array(0),
@@ -162,9 +146,6 @@ export function ParticleMorph({
         getShapePoints(nextShape, particleCount, radius),
       );
       const cur = currentPos.current;
-      // Snapshot (not alias) the live position: `cur` keeps being written every
-      // frame by the tick loop, and `start` must stay fixed at the position the
-      // transition began from for the eased lerp below to be correct.
       startPos.current = cur.x.length
         ? { x: cur.x.slice(), y: cur.y.slice(), z: cur.z.slice() }
         : {
@@ -179,7 +160,6 @@ export function ParticleMorph({
     [particleCount, radius],
   );
 
-  // Initialize (or fully reset) positions whenever particle count or radius change.
   useEffect(() => {
     const now = performance.now();
     const initial = pointsToBuffer(
@@ -204,7 +184,6 @@ export function ParticleMorph({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [particleCount, radius]);
 
-  // Manual shape changes (when not auto-morphing) trigger a one-off transition.
   useEffect(() => {
     if (autoMorph) return;
     if (currentShapeRef.current === shape) return;
@@ -224,9 +203,6 @@ export function ParticleMorph({
     mouseRef.current.active = false;
   }, []);
 
-  // Canvas backing-store setup: run whenever the CSS size changes. A fresh
-  // `ctx.scale` is required any time `canvas.width`/`height` is touched, since
-  // that resets the drawing context's transform.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -239,12 +215,6 @@ export function ParticleMorph({
     ctx?.scale(dpr, dpr);
   }, [width, height]);
 
-  // ---------------------------------------------------------------------
-  // Main animation loop — the only place that runs every frame. Draws
-  // directly to a single canvas via cached glow sprites (`drawImage`)
-  // instead of updating one DOM node per particle, which is what lets this
-  // scale to several thousand particles at 60fps.
-  // ---------------------------------------------------------------------
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -306,14 +276,12 @@ export function ParticleMorph({
         cur.y[i] = y0;
         cur.z[i] = z0;
 
-        // Organic drift: smooth 3D noise so nothing is ever perfectly static.
         const nOff = noiseOffset[i];
         const sd = seed[i];
         const driftX = noise3D(nOff + nt, sd, 0) * 10;
         const driftY = noise3D(sd, nOff + nt, 5) * 10;
         const driftZ = noise3D(nOff, sd, nt) * 10;
 
-        // Slow personal orbit around the particle's own resting point.
         const orbitAngle = t * 0.001 * orbitSpeed[i] + orbitPhase[i];
         const orbitX = Math.cos(orbitAngle) * orbitRadius[i];
         const orbitY = Math.sin(orbitAngle) * orbitRadius[i];
@@ -325,7 +293,6 @@ export function ParticleMorph({
         const rx = x * cosA - z * sinA;
         const rz = x * sinA + z * cosA;
 
-        // Faux-perspective projection onto the 2D canvas plane.
         const perspective = FOCAL_LENGTH / (FOCAL_LENGTH + rz + radius);
         let screenX = rx * perspective;
         let screenY = y * perspective;

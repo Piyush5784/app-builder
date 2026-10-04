@@ -7,10 +7,6 @@ export interface StreamPromptArgs {
   model?: string;
 }
 
-// POSTs to /agent/prompt and reads the response as one long-lived stream of
-// SSE frames, calling `onEvent` for each as it arrives. The whole run —
-// sandbox status, tokens, tool calls, completion — comes back on this one
-// connection, in order, so there's nothing else to subscribe to.
 export async function streamPrompt(
   { prompt, sessionId, model }: StreamPromptArgs,
   onEvent: (event: AgentEvent) => void,
