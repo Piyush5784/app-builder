@@ -6,6 +6,11 @@ runs it, and iterates on real errors — build failures, missing imports,
 failed tests — inside an isolated [E2B](https://e2b.dev) sandbox, until it
 hands back a working, running application.
 
+
+<img width="1863" height="1008" alt="Screenshot from 2026-10-05 11-49-12" src="https://github.com/user-attachments/assets/b8b34b2e-cb7e-4083-ae8d-2658ddcb3a8b" />
+<img width="1863" height="1008" alt="Screenshot from 2026-10-05 11-50-18" src="https://github.com/user-attachments/assets/643092b0-3379-4989-8edb-962527599f71" />
+
+
 ## Tech Stack
 
 - [Bun](https://bun.sh) – runtime
